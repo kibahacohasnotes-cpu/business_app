@@ -97,6 +97,7 @@ export default function RegisterScreen() {
       </Text>
 
       <TextInput
+      placeholderTextColor="#888"
         placeholder="Full name"
         value={fullName}
         onChangeText={setFullName}
@@ -104,6 +105,7 @@ export default function RegisterScreen() {
       />
 
       <TextInput
+      placeholderTextColor="#888"
         placeholder="Phone number"
         keyboardType="phone-pad"
         value={phone}
@@ -112,6 +114,7 @@ export default function RegisterScreen() {
       />
 
       <TextInput
+      placeholderTextColor="#888"
         placeholder="Email"
         autoCapitalize="none"
         keyboardType="email-address"
@@ -121,6 +124,7 @@ export default function RegisterScreen() {
       />
 
       <TextInput
+      placeholderTextColor="#888"
         placeholder="Password"
         secureTextEntry
         value={password}
@@ -178,4 +182,6 @@ const inputStyle = {
   borderRadius: 12,
   padding: 16,
   marginBottom: 14,
+  color: "#111",
+  backgroundColor: "#fff",
 };

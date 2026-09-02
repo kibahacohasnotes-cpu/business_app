@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Business",
-    "slug": "Business",
+   "name": "Business Manager",
+  "slug": "business-manager",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app_icon.png",
     "scheme": "business",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.najum.business"
     },
     "web": {
       "output": "static",
@@ -47,6 +48,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7e8abc0c-0fc0-43fa-861d-a49ad40080b0"
+      }
     }
   }
 }

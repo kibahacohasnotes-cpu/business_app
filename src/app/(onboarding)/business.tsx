@@ -1,8 +1,9 @@
 import AppAlert from "@/components/ui/AppAlert";
 import { createBusiness } from "@/lib/business";
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -58,6 +59,7 @@ export default function BusinessSetupScreen() {
   const [website, setWebsite] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   const [alert, setAlert] = useState({
     visible: false,
@@ -66,7 +68,68 @@ export default function BusinessSetupScreen() {
     type: "error" as "success" | "error" | "warning",
   });
 
-  function showError(title: string, message: string) {
+  // -----------------------------------------
+  // LOAD REGISTERED USER INFORMATION
+  // -----------------------------------------
+
+  useEffect(() => {
+    async function loadUserInformation() {
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!user) {
+          router.replace("/login");
+          return;
+        }
+
+        // Information entered during registration
+        const registeredName =
+          user.user_metadata?.full_name ?? "";
+
+        const registeredPhone =
+          user.user_metadata?.phone ?? "";
+
+        const registeredEmail =
+          user.email ?? "";
+
+        // Automatically populate matching fields
+        setPhone(registeredPhone);
+        setEmail(registeredEmail);
+
+        // If the business name hasn't been entered yet,
+        // use the registered user's name as a starting point.
+        // The user can change it.
+        if (registeredName) {
+          setBusinessName(registeredName);
+        }
+      } catch (error) {
+        console.error(
+          "LOAD USER INFORMATION ERROR:",
+          error
+        );
+      } finally {
+        setLoadingUser(false);
+      }
+    }
+
+    loadUserInformation();
+  }, [router]);
+
+  // -----------------------------------------
+  // ALERT
+  // -----------------------------------------
+
+  function showError(
+    title: string,
+    message: string
+  ) {
     setAlert({
       visible: true,
       title,
@@ -75,12 +138,17 @@ export default function BusinessSetupScreen() {
     });
   }
 
+  // -----------------------------------------
+  // VALIDATION
+  // -----------------------------------------
+
   function validateStepOne() {
     if (!businessName.trim()) {
       showError(
         "Business name required",
         "Enter your business name to continue."
       );
+
       return false;
     }
 
@@ -89,6 +157,7 @@ export default function BusinessSetupScreen() {
         "Business type required",
         "Select the type of business you operate."
       );
+
       return false;
     }
 
@@ -101,23 +170,40 @@ export default function BusinessSetupScreen() {
         "Contact information",
         "Please provide at least a phone number or email address."
       );
+
       return false;
     }
 
     return true;
   }
 
+  // -----------------------------------------
+  // NAVIGATION
+  // -----------------------------------------
+
   function nextStep() {
-    if (step === 1 && !validateStepOne()) return;
+    if (step === 1 && !validateStepOne()) {
+      return;
+    }
 
-    if (step === 2 && !validateStepTwo()) return;
+    if (step === 2 && !validateStepTwo()) {
+      return;
+    }
 
-    setStep((current) => Math.min(current + 1, 3));
+    setStep((current) =>
+      Math.min(current + 1, 3)
+    );
   }
 
   function previousStep() {
-    setStep((current) => Math.max(current - 1, 1));
+    setStep((current) =>
+      Math.max(current - 1, 1)
+    );
   }
+
+  // -----------------------------------------
+  // CREATE BUSINESS
+  // -----------------------------------------
 
   async function handleCreateBusiness() {
     try {
@@ -154,6 +240,29 @@ export default function BusinessSetupScreen() {
     }
   }
 
+  // -----------------------------------------
+  // LOADING USER
+  // -----------------------------------------
+
+  if (loadingUser) {
+    return (
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator
+          size="large"
+          color="#0f172a"
+        />
+
+        <Text className="mt-4 text-sm text-slate-500">
+          Loading your information...
+        </Text>
+      </View>
+    );
+  }
+
+  // -----------------------------------------
+  // UI
+  // -----------------------------------------
+
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-slate-50"
@@ -176,7 +285,6 @@ export default function BusinessSetupScreen() {
           {/* HEADER */}
 
           <View className="mb-8">
-
             <Text className="text-sm font-semibold text-slate-400">
               STEP {step} OF 3
             </Text>
@@ -202,14 +310,11 @@ export default function BusinessSetupScreen() {
               {step === 3 &&
                 "These details help personalize your business profile."}
             </Text>
-
           </View>
-
 
           {/* PROGRESS */}
 
           <View className="mb-8 flex-row gap-2">
-
             {[1, 2, 3].map((item) => (
               <View
                 key={item}
@@ -220,15 +325,12 @@ export default function BusinessSetupScreen() {
                 }`}
               />
             ))}
-
           </View>
-
 
           {/* STEP 1 */}
 
           {step === 1 && (
             <View>
-
               <FieldLabel
                 label="Business name"
                 required
@@ -243,14 +345,12 @@ export default function BusinessSetupScreen() {
                 className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
               />
 
-
               <FieldLabel
                 label="Business type"
                 required
               />
 
               <View className="mb-6 flex-row flex-wrap gap-2">
-
                 {BUSINESS_TYPES.map((type) => {
                   const selected =
                     businessType === type;
@@ -279,9 +379,7 @@ export default function BusinessSetupScreen() {
                     </Pressable>
                   );
                 })}
-
               </View>
-
 
               <FieldLabel
                 label="About your business"
@@ -298,16 +396,13 @@ export default function BusinessSetupScreen() {
                 textAlignVertical="top"
                 className="mb-6 min-h-[130px] rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
               />
-
             </View>
           )}
-
 
           {/* STEP 2 */}
 
           {step === 2 && (
             <View>
-
               <FieldLabel
                 label="Phone number"
                 optional
@@ -321,7 +416,6 @@ export default function BusinessSetupScreen() {
                 keyboardType="phone-pad"
                 className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
               />
-
 
               <FieldLabel
                 label="Email address"
@@ -338,7 +432,6 @@ export default function BusinessSetupScreen() {
                 className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
               />
 
-
               <FieldLabel
                 label="Business address"
                 optional
@@ -351,7 +444,6 @@ export default function BusinessSetupScreen() {
                 onChangeText={setAddress}
                 className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
               />
-
 
               <FieldLabel
                 label="City"
@@ -366,7 +458,6 @@ export default function BusinessSetupScreen() {
                 className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
               />
 
-
               <FieldLabel
                 label="Country"
                 optional
@@ -379,23 +470,19 @@ export default function BusinessSetupScreen() {
                 onChangeText={setCountry}
                 className="mb-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
               />
-
             </View>
           )}
-
 
           {/* STEP 3 */}
 
           {step === 3 && (
             <View>
-
               <FieldLabel
                 label="Currency"
                 required
               />
 
               <View className="mb-7">
-
                 {CURRENCIES.map((item) => {
                   const selected =
                     currency === item.code;
@@ -412,7 +499,6 @@ export default function BusinessSetupScreen() {
                           : "border-slate-200 bg-white"
                       }`}
                     >
-
                       <View
                         className={`h-10 w-10 items-center justify-center rounded-xl ${
                           selected
@@ -432,7 +518,6 @@ export default function BusinessSetupScreen() {
                       </View>
 
                       <View className="ml-3 flex-1">
-
                         <Text
                           className={`font-semibold ${
                             selected
@@ -452,7 +537,6 @@ export default function BusinessSetupScreen() {
                         >
                           {item.code}
                         </Text>
-
                       </View>
 
                       {selected && (
@@ -462,13 +546,10 @@ export default function BusinessSetupScreen() {
                           color="white"
                         />
                       )}
-
                     </Pressable>
                   );
                 })}
-
               </View>
-
 
               <FieldLabel
                 label="Registration number"
@@ -479,13 +560,10 @@ export default function BusinessSetupScreen() {
                 placeholder="Business registration number"
                 placeholderTextColor="#94a3b8"
                 value={registrationNumber}
-                onChangeText={
-                  setRegistrationNumber
-                }
+                onChangeText={setRegistrationNumber}
                 autoCapitalize="characters"
                 className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
               />
-
 
               <FieldLabel
                 label="Website or social link"
@@ -506,15 +584,12 @@ export default function BusinessSetupScreen() {
                 You can add your website, Instagram,
                 Facebook, or another business link.
               </Text>
-
             </View>
           )}
-
 
           {/* NAVIGATION */}
 
           <View className="mt-8 flex-row gap-3">
-
             {step > 1 && (
               <Pressable
                 onPress={previousStep}
@@ -538,7 +613,6 @@ export default function BusinessSetupScreen() {
               disabled={loading}
               className="h-14 flex-1 flex-row items-center justify-center rounded-2xl bg-slate-950"
             >
-
               {loading ? (
                 <ActivityIndicator color="white" />
               ) : (
@@ -563,11 +637,8 @@ export default function BusinessSetupScreen() {
                   />
                 </>
               )}
-
             </Pressable>
-
           </View>
-
 
           {/* FOOTER */}
 
@@ -575,10 +646,8 @@ export default function BusinessSetupScreen() {
             You can change these details later
             from your business profile.
           </Text>
-
         </View>
       </ScrollView>
-
 
       {/* ALERT */}
 
@@ -595,11 +664,9 @@ export default function BusinessSetupScreen() {
           }))
         }
       />
-
     </KeyboardAvoidingView>
   );
 }
-
 
 function FieldLabel({
   label,
@@ -612,7 +679,6 @@ function FieldLabel({
 }) {
   return (
     <View className="mb-2 flex-row items-center">
-
       <Text className="text-sm font-semibold text-slate-700">
         {label}
       </Text>
@@ -628,7 +694,6 @@ function FieldLabel({
           Optional
         </Text>
       )}
-
     </View>
   );
 }

@@ -1,14 +1,14 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import Animated, {
   FadeInDown,
   FadeInRight,
@@ -23,6 +23,9 @@ import {
   UserCircle,
   Users,
   Wallet,
+  Eye,
+  EyeOff,
+  TrendingDown,
 } from "lucide-react-native";
 import { getMyBusiness } from "@/lib/business";
 import { getDashboardStats } from "@/lib/dashboard";
@@ -46,9 +49,12 @@ type DashboardData = {
 export default function Dashboard() {
 
   const [logoutAlert, setLogoutAlert] =  useState(false);
+  const [moneyVisible, setMoneyVisible] = useState(false);
   const [loggingOut, setLoggingOut] =  useState(false);
   const router = useRouter();
   const [logoutError, setTheLogoutError] =  useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   async function handleLogout() {
     try {
@@ -88,13 +94,8 @@ export default function Dashboard() {
     lowStock: [],
   });
 
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  async function loadDashboard() {
+  const loadDashboard = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -108,7 +109,8 @@ export default function Dashboard() {
       setBusinessName(business.name);
       setCurrency(business.currency || "TZS");
 
-      const dashboardStats = await getDashboardStats(business.id);
+      const dashboardStats =
+        await getDashboardStats(business.id);
 
       setStats(dashboardStats);
     } catch (error) {
@@ -116,7 +118,23 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  const refreshDashboard = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      await loadDashboard();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadDashboard]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [loadDashboard])
+  );
+
 
   function formatMoney(value: number) {
     return `${currency} ${value.toLocaleString()}`;
@@ -191,21 +209,6 @@ return (
       />
     </Pressable>
 
-    {/* =================================================
-        LOGOUT
-    ================================================= */}
-
-    <Pressable
-      onPress={() =>
-        setLogoutAlert(true)
-      }
-      className="ml-2 h-12 w-12 items-center justify-center rounded-2xl bg-white active:opacity-70"
-    >
-      <LogOut
-        size={20}
-        color="#dc2626"
-      />
-    </Pressable>
 
   </View>
 </Animated.View>
@@ -214,29 +217,52 @@ return (
     {/* =====================================================
         SCROLLABLE CONTENT
     ===================================================== */}
-
-    <ScrollView
-      className="flex-1"
-      showsVerticalScrollIndicator={false}
-      contentContainerClassName="pb-32"
-    >
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerClassName="pb-32"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refreshDashboard}
+            tintColor="#0f172a"
+            colors={["#0f172a"]}
+          />
+        }
+>
 
       {/* =================================================
           REVENUE
       ================================================= */}
-
       <Animated.View
         entering={FadeInDown.delay(100).duration(500)}
         className="mx-6 rounded-[28px] bg-slate-950 p-6"
       >
-        <Text className="text-sm font-medium text-slate-400">
-          Total Revenue
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <Text className="text-sm font-medium text-slate-400">
+            Total Revenue
+          </Text>
+
+          <Pressable
+            onPress={() =>
+              setMoneyVisible((current) => !current)
+            }
+            className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-70"
+          >
+            {moneyVisible ? (
+              <Eye size={19} color="white" />
+            ) : (
+              <EyeOff size={19} color="white" />
+            )}
+          </Pressable>
+        </View>
 
         <Text className="mt-2 text-4xl font-bold text-white">
           {loading
             ? "Loading..."
-            : formatMoney(stats.revenue)}
+            : moneyVisible
+              ? formatMoney(stats.revenue)
+              : "••••••••"}
         </Text>
 
         <View className="mt-5 flex-row items-center">
@@ -247,7 +273,6 @@ return (
           </View>
         </View>
       </Animated.View>
-
 
       {/* =================================================
           STATS
@@ -358,7 +383,47 @@ return (
         </Pressable>
       </Animated.View>
 
+        {/* =================================================
+            EXPENSES
+        ================================================= */}
 
+        <Animated.View
+          entering={FadeInDown.delay(370).duration(500)}
+          className="mx-6 mt-3"
+        >
+          <Pressable
+            onPress={() => router.push("/expenses")}
+            className="rounded-3xl bg-white p-5 active:opacity-70"
+          >
+            <View className="flex-row items-center">
+
+              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+                <TrendingDown
+                  size={20}
+                  color="#0f172a"
+                />
+              </View>
+
+              <View className="ml-4 flex-1">
+
+                <Text className="text-sm text-slate-500">
+                  Expenses
+                </Text>
+
+                <Text className="mt-1 text-base font-bold text-slate-950">
+                  Track business expenses
+                </Text>
+
+              </View>
+
+              <ChevronRight
+                size={20}
+                color="#94a3b8"
+              />
+
+            </View>
+          </Pressable>
+        </Animated.View>
         {/* =================================================
             PAYMENTS
         ================================================= */}
@@ -545,29 +610,6 @@ return (
       </Animated.View>
 
     </ScrollView>
-<AppAlert
-  visible={logoutAlert}
-  title="Logout"
-  message="Are you sure you want to logout of your account?"
-  type="warning"
-  buttonText="Logout"
-  cancelText="Cancel"
-  onClose={() =>
-    setLogoutAlert(false)
-  }
-  onConfirm={handleLogout}
-/>
-
-<AppAlert
-  visible={logoutError}
-  title="Logout failed"
-  message="Unable to logout. Please try again."
-  type="error"
-  buttonText="Try Again"
-  onClose={() =>
-    setTheLogoutError(false)
-  }
-/>
   </View>
 );
 }

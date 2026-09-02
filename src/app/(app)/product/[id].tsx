@@ -7,7 +7,11 @@ import {
 } from "@/lib/products";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -22,6 +26,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import AppAlert from "@/components/ui/AppAlert";
 
 
@@ -31,12 +42,37 @@ export default function ProductDetailScreen() {
 
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =  Dimensions.get("window");
   const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
+  const COLLAPSED_IMAGE_HEIGHT = IMAGE_HEIGHT * 0.7;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [productImages, setProductImages] = useState<ProductImage[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const scrollY = useSharedValue(0);
+
+const scrollHandler = useAnimatedScrollHandler({
+  onScroll: (event) => {
+    scrollY.value = Math.max(
+      0,
+      event.contentOffset.y
+    );
+  },
+});
+
+const heroAnimatedStyle = useAnimatedStyle(() => {
+  const height = interpolate(
+    scrollY.value,
+    [0, IMAGE_HEIGHT * 0.5],
+    [IMAGE_HEIGHT, COLLAPSED_IMAGE_HEIGHT],
+    Extrapolation.CLAMP
+  );
+
+  return {
+    height,
+  };
+});
 
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
@@ -341,167 +377,164 @@ return (
         : undefined
     }
   >
-    <ScrollView
+    {/* =====================================================
+        FIXED COLLAPSING HERO
+    ===================================================== */}
+
+    <Animated.View
+      style={[
+        {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 20,
+          elevation: 20,
+          width: SCREEN_WIDTH,
+          overflow: "hidden",
+          backgroundColor: "#e2e8f0",
+        },
+        heroAnimatedStyle,
+      ]}
+    >
+      {productImages.length > 0 ? (
+        <FlatList
+          data={productImages}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          bounces={false}
+          keyExtractor={(item) => item.id}
+          style={{ flex: 1 }}
+          renderItem={({ item }) => (
+            <View
+              style={{
+                width: SCREEN_WIDTH,
+                height: IMAGE_HEIGHT,
+              }}
+            >
+              <Image
+                source={{ uri: item.image_url }}
+                style={{
+                  width: SCREEN_WIDTH,
+                  height: IMAGE_HEIGHT,
+                }}
+                resizeMode="cover"
+              />
+            </View>
+          )}
+          onMomentumScrollEnd={(event) => {
+            const index = Math.round(
+              event.nativeEvent.contentOffset.x /
+                SCREEN_WIDTH
+            );
+
+            setActiveImageIndex(index);
+          }}
+        />
+      ) : (
+        <View className="flex-1 items-center justify-center bg-slate-200">
+          <Ionicons
+            name="images-outline"
+            size={48}
+            color="#94a3b8"
+          />
+
+          <Text className="mt-3 text-sm font-medium text-slate-500">
+            No product images
+          </Text>
+        </View>
+      )}
+
+      {/* DARK OVERLAY */}
+
+      <View className="absolute bottom-0 left-0 right-0 h-28 bg-black/20" />
+
+      {/* =================================================
+          FIXED BACK BUTTON
+      ================================================= */}
+
+      <TouchableOpacity
+        onPress={() => router.back()}
+        activeOpacity={0.8}
+        className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90"
+      >
+        <Ionicons
+          name="arrow-back"
+          size={22}
+          color="#0f172a"
+        />
+      </TouchableOpacity>
+
+      {/* =================================================
+          FIXED ACTIVE STATUS
+      ================================================= */}
+
+      <View className="absolute right-5 top-14">
+        <View
+          className={`rounded-full px-3 py-2 ${
+            product.is_active
+              ? "bg-green-50/95"
+              : "bg-white/90"
+          }`}
+        >
+          <Text
+            className={`text-xs font-bold ${
+              product.is_active
+                ? "text-green-600"
+                : "text-slate-500"
+            }`}
+          >
+            {product.is_active
+              ? "ACTIVE"
+              : "INACTIVE"}
+          </Text>
+        </View>
+      </View>
+
+      {/* IMAGE COUNTER */}
+
+      {productImages.length > 1 && (
+        <View className="absolute bottom-5 right-5 rounded-full bg-black/60 px-3 py-2">
+          <Text className="text-xs font-bold text-white">
+            {activeImageIndex + 1} /{" "}
+            {productImages.length}
+          </Text>
+        </View>
+      )}
+
+      {/* PAGINATION */}
+
+      {productImages.length > 1 && (
+        <View className="absolute bottom-5 left-0 right-0 flex-row items-center justify-center">
+          {productImages.map((_, index) => (
+            <View
+              key={index}
+              className={`mx-1 h-2 rounded-full ${
+                index === activeImageIndex
+                  ? "w-6 bg-white"
+                  : "w-2 bg-white/60"
+              }`}
+            />
+          ))}
+        </View>
+      )}
+    </Animated.View>
+
+    {/* =====================================================
+        SCROLLING CONTENT
+    ===================================================== */}
+
+    <Animated.ScrollView
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      onScroll={scrollHandler}
+      scrollEventThrottle={16}
       contentContainerStyle={{
+        paddingTop: IMAGE_HEIGHT,
         paddingBottom: 50,
       }}
     >
-     {/* PRODUCT IMAGE SLIDER */}
-
-      <View
-        style={{
-          width: SCREEN_WIDTH,
-          height: IMAGE_HEIGHT,
-        }}
-      >
-        {productImages.length > 0 ? (
-          <View
-            style={{
-              width: SCREEN_WIDTH,
-              height: IMAGE_HEIGHT,
-            }}
-            className="relative"
-          >
-            <FlatList
-              data={productImages}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              bounces={false}
-              keyExtractor={(item) => item.id}
-              onMomentumScrollEnd={(event) => {
-                const index = Math.round(
-                  event.nativeEvent.contentOffset.x /
-                    SCREEN_WIDTH
-                );
-
-                setActiveImageIndex(index);
-              }}
-              renderItem={({ item }) => (
-                <View
-                  style={{
-                    width: SCREEN_WIDTH,
-                    height: IMAGE_HEIGHT,
-                  }}
-                >
-                  <Image
-                    source={{ uri: item.image_url }}
-                    style={{
-                      width: SCREEN_WIDTH,
-                      height: IMAGE_HEIGHT,
-                    }}
-                    resizeMode="cover"
-                  />
-                </View>
-              )}
-            />
-
-            {/* DARK GRADIENT EFFECT */}
-
-            <View className="absolute bottom-0 left-0 right-0 h-28 bg-black/20" />
-
-            {/* BACK BUTTON */}
-
-            <TouchableOpacity
-              onPress={() => router.back()}
-              activeOpacity={0.8}
-              className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90"
-            >
-              <Ionicons
-                name="arrow-back"
-                size={22}
-                color="#0f172a"
-              />
-            </TouchableOpacity>
-
-            {/* ACTIVE STATUS */}
-
-            <View className="absolute right-5 top-14">
-              <View
-                className={`rounded-full px-3 py-2 ${
-                  product.is_active
-                    ? "bg-green-50/95"
-                    : "bg-white/90"
-                }`}
-              >
-                <Text
-                  className={`text-xs font-bold ${
-                    product.is_active
-                      ? "text-green-600"
-                      : "text-slate-500"
-                  }`}
-                >
-                  {product.is_active
-                    ? "ACTIVE"
-                    : "INACTIVE"}
-                </Text>
-              </View>
-            </View>
-
-            {/* IMAGE COUNTER */}
-
-            {productImages.length > 1 && (
-              <View className="absolute bottom-5 right-5 rounded-full bg-black/60 px-3 py-2">
-                <Text className="text-xs font-bold text-white">
-                  {activeImageIndex + 1} / {productImages.length}
-                </Text>
-              </View>
-            )}
-
-            {/* PAGINATION */}
-
-            {productImages.length > 1 && (
-              <View className="absolute bottom-5 left-0 right-0 flex-row items-center justify-center">
-                {productImages.map((_, index) => (
-                  <View
-                    key={index}
-                    className={`mx-1 h-2 rounded-full ${
-                      index === activeImageIndex
-                        ? "w-6 bg-white"
-                        : "w-2 bg-white/60"
-                    }`}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
-        ) : (
-          <View
-            style={{
-              width: SCREEN_WIDTH,
-              height: IMAGE_HEIGHT,
-            }}
-            className="items-center justify-center bg-slate-200"
-          >
-            <Ionicons
-              name="images-outline"
-              size={48}
-              color="#94a3b8"
-            />
-
-            <Text className="mt-3 text-sm font-medium text-slate-500">
-              No product images
-            </Text>
-
-            {/* BACK BUTTON */}
-
-            <TouchableOpacity
-              onPress={() => router.back()}
-              activeOpacity={0.8}
-              className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90"
-            >
-              <Ionicons
-                name="arrow-back"
-                size={22}
-                color="#0f172a"
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
       {/* PRODUCT TITLE */}
 
       <View className="px-5 pt-5">
@@ -642,7 +675,7 @@ return (
         </View>
       </View>
 
-      {/* SAVE */}
+      {/* SAVE / DELETE */}
 
       <View className="mx-5 mt-5">
         <TouchableOpacity
@@ -672,8 +705,6 @@ return (
           )}
         </TouchableOpacity>
 
-        {/* DELETE */}
-
         <TouchableOpacity
           activeOpacity={0.8}
           disabled={saving}
@@ -693,24 +724,25 @@ return (
           </View>
         </TouchableOpacity>
       </View>
-    </ScrollView>
-<AppAlert
-  visible={alertVisible}
-  title={alertTitle}
-  message={alertMessage}
-  type={alertType}
-  buttonText={alertButtonText}
-  cancelText={alertCancelText}
-  onClose={() => setAlertVisible(false)}
-  onConfirm={
-    alertConfirmAction
-      ? () => {
-          setAlertVisible(false);
-          alertConfirmAction();
-        }
-      : undefined
-  }
-/>
+    </Animated.ScrollView>
+
+    <AppAlert
+      visible={alertVisible}
+      title={alertTitle}
+      message={alertMessage}
+      type={alertType}
+      buttonText={alertButtonText}
+      cancelText={alertCancelText}
+      onClose={() => setAlertVisible(false)}
+      onConfirm={
+        alertConfirmAction
+          ? () => {
+              setAlertVisible(false);
+              alertConfirmAction();
+            }
+          : undefined
+      }
+    />
   </KeyboardAvoidingView>
 );
 

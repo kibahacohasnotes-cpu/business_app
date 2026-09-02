@@ -76,9 +76,11 @@ const filteredProducts = useMemo(() => {
   ).length;
 
 
-  function formatPrice(value: number) {
-    return new Intl.NumberFormat("en-TZ").format(value);
-  }
+function formatMoney(value: number) {
+  return `TZS ${new Intl.NumberFormat("en-TZ").format(
+    value
+  )}/=`;
+}
 
 
   function renderProduct({
@@ -153,7 +155,7 @@ const filteredProducts = useMemo(() => {
                   : "text-slate-900"
               }`}
             >
-              {formatPrice(item.stock_qty)} {item.unit}
+              {formatMoney(item.stock_qty)} {item.unit}
             </Text>
           </View>
 
@@ -163,7 +165,7 @@ const filteredProducts = useMemo(() => {
             </Text>
 
             <Text className="mt-1 text-base font-bold text-slate-900">
-              TZS {formatPrice(item.sale_price)}
+              TZS {formatMoney(item.sale_price)}
             </Text>
           </View>
         </View>
@@ -190,9 +192,9 @@ const filteredProducts = useMemo(() => {
       <View className="px-5 pb-4 pt-6">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-4">
-             <TouchableOpacity
+          <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => router.push("/add-product")}
+            onPress={() => router.back()}
             className="h-12 w-12 items-center justify-center rounded-2xl bg-slate-950"
           >
             <Ionicons
