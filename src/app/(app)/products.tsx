@@ -3,17 +3,16 @@ import { getProducts, type Product } from "@/lib/products";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Package } from "lucide-react-native";
-import React from "react";
-import { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
+  Image,
   RefreshControl,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 export default function ProductsScreen() {
@@ -49,7 +48,7 @@ export default function ProductsScreen() {
     }, [loadProducts])
   );
 
-  const filteredProducts = useMemo(() => {
+const filteredProducts = useMemo(() => {
   const query = search.trim().toLowerCase();
 
   if (!query) {
@@ -57,8 +56,11 @@ export default function ProductsScreen() {
   }
 
   return products.filter((product) => {
-    const name = product.name?.toLowerCase() ?? "";
-    const sku = product.sku?.toLowerCase() ?? "";
+    const name =
+      product.name?.toLowerCase() ?? "";
+
+    const sku =
+      product.sku?.toLowerCase() ?? "";
 
     return (
       name.includes(query) ||
@@ -67,14 +69,17 @@ export default function ProductsScreen() {
   });
 }, [products, search]);
 
+
   const lowStockCount = products.filter(
     (product) =>
       product.stock_qty <= product.low_stock_threshold
   ).length;
 
+
   function formatPrice(value: number) {
     return new Intl.NumberFormat("en-TZ").format(value);
   }
+
 
   function renderProduct({
     item,
@@ -98,36 +103,43 @@ export default function ProductsScreen() {
         }
       >
         <View className="flex-row items-center">
-          <View className="mr-4 h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-            <Ionicons
-              name="cube-outline"
-              size={27}
-              color="#0f172a"
-            />
-          </View>
+  {/* PRODUCT IMAGE */}
 
-          <View className="flex-1">
-            <Text
-              className="text-base font-bold text-slate-900"
-              numberOfLines={1}
-            >
-              {item.name}
-            </Text>
+  <View className="mr-4 h-14 w-14 overflow-hidden rounded-2xl bg-slate-100">
+    {item.image_url ? (
+      <Image
+        source={{ uri: item.image_url }}
+        className="h-full w-full"
+        resizeMode="cover"
+      />
+    ) : (
+      <View className="h-full w-full items-center justify-center bg-slate-100">
+        <Ionicons
+          name="image-outline"
+          size={24}
+          color="#94a3b8"
+        />
+      </View>
+    )}
+  </View>
 
-            <Text className="mt-1 text-xs text-slate-400">
-              {item.sku
-                ? `SKU: ${item.sku}`
-                : item.category || "No category"}
-            </Text>
-          </View>
+  {/* PRODUCT INFORMATION */}
 
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#94a3b8"
-          />
-        </View>
+  <View className="flex-1">
+    <Text
+      className="text-base font-bold text-slate-900"
+      numberOfLines={1}
+    >
+      {item.name}
+    </Text>
 
+    <Text className="mt-1 text-xs text-slate-400">
+      {item.sku
+        ? `SKU: ${item.sku}`
+        : "No SKU"}
+    </Text>
+  </View>
+</View>
         <View className="mt-4 flex-row items-end justify-between">
           <View>
             <Text className="text-xs font-medium text-slate-400">
@@ -174,16 +186,23 @@ export default function ProductsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 pt-8 bg-slate-50">
       <View className="px-5 pb-4 pt-6">
         <View className="flex-row items-center justify-between">
-          <View>
+          <View className="flex-row items-center gap-4">
+             <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => router.push("/add-product")}
+            className="h-12 w-12 items-center justify-center rounded-2xl bg-slate-950"
+          >
+            <Ionicons
+              name="chevron-back"
+              size={26}
+              color="white"
+            />
+          </TouchableOpacity>
             <Text className="text-3xl font-bold text-slate-950">
               Products
-            </Text>
-
-            <Text className="mt-1 text-sm text-slate-400">
-              Manage your inventory
             </Text>
           </View>
           <TouchableOpacity
@@ -199,54 +218,57 @@ export default function ProductsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View className="mt-5 flex-row items-center rounded-2xl bg-white px-4 py-3">
-          <Ionicons
-            name="search-outline"
-            size={21}
-            color="#94a3b8"
-          />
+      <View className="mt-5 flex-row items-center rounded-2xl bg-white px-4 py-3">
+        <Ionicons
+          name="search-outline"
+          size={21}
+          color="#94a3b8"
+        />
 
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search products..."
-            placeholderTextColor="#94a3b8"
-            className="ml-3 flex-1 text-base text-slate-900"
-          />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search by name or SKU..."
+          placeholderTextColor="#94a3b8"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          className="ml-3 flex-1 text-base text-slate-900"
+        />
 
-          {search.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearch("")}
-            >
-              <Ionicons
-                name="close-circle"
-                size={20}
-                color="#94a3b8"
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+        {search.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setSearch("")}
+            activeOpacity={0.7}
+            className="ml-2"
+          >
+            <Ionicons
+              name="close-circle"
+              size={20}
+              color="#94a3b8"
+            />
+          </TouchableOpacity>
+        )}
+      </View>
       </View>
 
       <View className="px-5">
         <View className="flex-row gap-3">
-        <Pressable
-          onPress={() => router.push("/products")}
-          className="flex-1 active:opacity-70"
-        >
-          <View className="rounded-3xl bg-white p-5">
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
-              <Package size={20} color="#0f172a" />
-            </View>
+          <View className="flex-1">
+  <View className="rounded-3xl bg-white p-5">
+    <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+      <Package size={20} color="#0f172a" />
+    </View>
 
-            <Text className="mt-5 text-sm text-slate-500">
-              Products
-            </Text>
-            <Text className="mt-1 text-2xl font-bold text-slate-950">
-            {loading ? "..." : products.length}
-          </Text>
-          </View>
-        </Pressable>
+    <Text className="mt-5 text-sm text-slate-500">
+      Products
+    </Text>
+
+    <Text className="mt-1 text-2xl font-bold text-slate-950">
+      {loading ? "..." : products.length}
+    </Text>
+  </View>
+</View>
 
           <View className="flex-1 rounded-3xl bg-orange-50 p-4">
             <Text className="text-xs font-semibold text-orange-500">
@@ -279,11 +301,22 @@ export default function ProductsScreen() {
             />
           }
           ListHeaderComponent={
-            <Text className="mb-3 text-lg font-bold text-slate-900">
-              {search
-                ? "Search results"
-                : "All products"}
-            </Text>
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-slate-900">
+                {search.trim()
+                  ? "Search results"
+                  : "All products"}
+              </Text>
+
+              {search.trim() && (
+                <Text className="text-sm font-medium text-slate-400">
+                  {filteredProducts.length}{" "}
+                  {filteredProducts.length === 1
+                    ? "result"
+                    : "results"}
+                </Text>
+              )}
+            </View>
           }
           ListEmptyComponent={
             loading ? (

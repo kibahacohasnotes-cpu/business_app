@@ -1,14 +1,17 @@
 import {
   deleteProduct,
-  getProducts,
+  getProductImages,
   updateProduct,
   type Product,
+  type ProductImage,
 } from "@/lib/products";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
+  FlatList,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -26,9 +29,14 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =  Dimensions.get("window");
+  const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
+
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
@@ -51,7 +59,7 @@ export default function ProductDetailScreen() {
 
   const [alertConfirmAction, setAlertConfirmAction] = useState<(() => void) | undefined>();
 
- function showAlert(
+function showAlert(
   title: string,
   message: string,
   type: "success" | "error" | "warning" = "success",
@@ -68,7 +76,7 @@ export default function ProductDetailScreen() {
   setAlertVisible(true);
 }
 
-    function handleAlertClose() {
+   function handleAlertClose() {
       setAlertVisible(false);
 
       if (alertAction === "back") {
@@ -109,6 +117,11 @@ export default function ProductDetailScreen() {
       const loadedProduct = data as Product;
 
       setProduct(loadedProduct);
+
+      const images = await getProductImages(loadedProduct.id);
+
+      setProductImages(images);
+      setActiveImageIndex(0);
 
       setName(loadedProduct.name ?? "");
       setSku(loadedProduct.sku ?? "");
@@ -206,30 +219,28 @@ export default function ProductDetailScreen() {
         is_active: isActive,
       });
 
-      Alert.alert(
-        "Product updated",
-        `${name.trim()} has been updated successfully.`,
-        [
-          {
-            text: "Done",
-            onPress: () => router.back(),
-          },
-        ]
-      );
+        showAlert(
+      "Product updated",
+      `${name.trim()} has been updated successfully.`,
+      "success",
+      "Done",
+      () => router.back()
+    );
     } catch (error: any) {
       console.error("UPDATE PRODUCT ERROR:", error);
 
-      Alert.alert(
+          showAlert(
         "Unable to update product",
         error?.message ||
-          "Something went wrong while updating the product."
+          "Something went wrong while updating the product.",
+        "error"
       );
     } finally {
       setSaving(false);
     }
   }
 
-  function handleDelete() {
+function handleDelete() {
   if (!product) {
     return;
   }
@@ -238,9 +249,12 @@ export default function ProductDetailScreen() {
     "Delete product?",
     `Are you sure you want to delete "${product.name}"? This action cannot be undone.`,
     "warning",
-    "delete-confirm"
+    "Delete",
+    confirmDelete,
+    "Cancel"
   );
 }
+
 async function confirmDelete() {
   if (!product) {
     return;
@@ -334,64 +348,158 @@ return (
         paddingBottom: 50,
       }}
     >
-      {/* PRODUCT HERO IMAGE */}
+     {/* PRODUCT IMAGE SLIDER */}
 
-      <View className="relative w-full">
-        {product.image_url ? (
-          <Image
-            source={{ uri: product.image_url }}
-            className="w-full"
+      <View
+        style={{
+          width: SCREEN_WIDTH,
+          height: IMAGE_HEIGHT,
+        }}
+      >
+        {productImages.length > 0 ? (
+          <View
             style={{
-              height: 320,
+              width: SCREEN_WIDTH,
+              height: IMAGE_HEIGHT,
             }}
-            resizeMode="cover"
-          />
+            className="relative"
+          >
+            <FlatList
+              data={productImages}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              bounces={false}
+              keyExtractor={(item) => item.id}
+              onMomentumScrollEnd={(event) => {
+                const index = Math.round(
+                  event.nativeEvent.contentOffset.x /
+                    SCREEN_WIDTH
+                );
+
+                setActiveImageIndex(index);
+              }}
+              renderItem={({ item }) => (
+                <View
+                  style={{
+                    width: SCREEN_WIDTH,
+                    height: IMAGE_HEIGHT,
+                  }}
+                >
+                  <Image
+                    source={{ uri: item.image_url }}
+                    style={{
+                      width: SCREEN_WIDTH,
+                      height: IMAGE_HEIGHT,
+                    }}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
+            />
+
+            {/* DARK GRADIENT EFFECT */}
+
+            <View className="absolute bottom-0 left-0 right-0 h-28 bg-black/20" />
+
+            {/* BACK BUTTON */}
+
+            <TouchableOpacity
+              onPress={() => router.back()}
+              activeOpacity={0.8}
+              className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90"
+            >
+              <Ionicons
+                name="arrow-back"
+                size={22}
+                color="#0f172a"
+              />
+            </TouchableOpacity>
+
+            {/* ACTIVE STATUS */}
+
+            <View className="absolute right-5 top-14">
+              <View
+                className={`rounded-full px-3 py-2 ${
+                  product.is_active
+                    ? "bg-green-50/95"
+                    : "bg-white/90"
+                }`}
+              >
+                <Text
+                  className={`text-xs font-bold ${
+                    product.is_active
+                      ? "text-green-600"
+                      : "text-slate-500"
+                  }`}
+                >
+                  {product.is_active
+                    ? "ACTIVE"
+                    : "INACTIVE"}
+                </Text>
+              </View>
+            </View>
+
+            {/* IMAGE COUNTER */}
+
+            {productImages.length > 1 && (
+              <View className="absolute bottom-5 right-5 rounded-full bg-black/60 px-3 py-2">
+                <Text className="text-xs font-bold text-white">
+                  {activeImageIndex + 1} / {productImages.length}
+                </Text>
+              </View>
+            )}
+
+            {/* PAGINATION */}
+
+            {productImages.length > 1 && (
+              <View className="absolute bottom-5 left-0 right-0 flex-row items-center justify-center">
+                {productImages.map((_, index) => (
+                  <View
+                    key={index}
+                    className={`mx-1 h-2 rounded-full ${
+                      index === activeImageIndex
+                        ? "w-6 bg-white"
+                        : "w-2 bg-white/60"
+                    }`}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
         ) : (
           <View
-            className="w-full bg-slate-200"
             style={{
-              height: 320,
+              width: SCREEN_WIDTH,
+              height: IMAGE_HEIGHT,
             }}
-          />
-        )}
-
-        {/* BACK BUTTON */}
-
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90"
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={22}
-            color="#0f172a"
-          />
-        </TouchableOpacity>
-
-        {/* ACTIVE STATUS */}
-
-        <View className="absolute right-5 top-14">
-          <View
-            className={`rounded-full px-3 py-2 ${
-              product.is_active
-                ? "bg-green-50/95"
-                : "bg-white/90"
-            }`}
+            className="items-center justify-center bg-slate-200"
           >
-            <Text
-              className={`text-xs font-bold ${
-                product.is_active
-                  ? "text-green-600"
-                  : "text-slate-500"
-              }`}
-            >
-              {product.is_active
-                ? "ACTIVE"
-                : "INACTIVE"}
+            <Ionicons
+              name="images-outline"
+              size={48}
+              color="#94a3b8"
+            />
+
+            <Text className="mt-3 text-sm font-medium text-slate-500">
+              No product images
             </Text>
+
+            {/* BACK BUTTON */}
+
+            <TouchableOpacity
+              onPress={() => router.back()}
+              activeOpacity={0.8}
+              className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90"
+            >
+              <Ionicons
+                name="arrow-back"
+                size={22}
+                color="#0f172a"
+              />
+            </TouchableOpacity>
           </View>
-        </View>
+        )}
       </View>
 
       {/* PRODUCT TITLE */}

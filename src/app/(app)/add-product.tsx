@@ -1,9 +1,13 @@
 
-import { createProduct, uploadProductImages } from "@/lib/products";
+import {
+  createProduct,
+  uploadProductImages,
+} from "@/lib/products";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   ActivityIndicator,
   Animated,
@@ -133,105 +137,168 @@ export default function AddProductScreen() {
 
   function handleSuccessClose() {
     setAlertVisible(false);
-    router.replace("/");
+    router.back();
   }
 
-  async function handleCreateProduct() {
-    if (!name.trim()) {
-      showAlert(
-        "Product name required",
-        "Enter the product name.",
-        "warning"
-      );
-      return;
-    }
+async function handleCreateProduct() {
 
-    const cost = Number(costPrice);
-    const sale = Number(salePrice);
-    const stock = Number(stockQty);
-    const threshold = Number(lowStockThreshold);
+  if (sku.trim()) {
+  const { data: existingProduct, error: skuCheckError } =
+    await supabase
+      .from("products")
+      .select("id")
+      .eq("sku", sku.trim())
+      .maybeSingle();
 
-    if (Number.isNaN(cost) || cost < 0) {
-      showAlert(
-        "Invalid cost price",
-        "Enter a valid cost price.",
-        "warning"
-      );
-      return;
-    }
+  if (skuCheckError) {
+    throw skuCheckError;
+  }
 
-    if (Number.isNaN(sale) || sale < 0) {
-      showAlert(
-        "Invalid selling price",
-        "Enter a valid selling price.",
-        "warning"
-      );
-      return;
-    }
-
-    if (Number.isNaN(stock) || stock < 0) {
-      showAlert(
-        "Invalid stock",
-        "Enter a valid stock quantity.",
-        "warning"
-      );
-      return;
-    }
-
-    if (Number.isNaN(threshold) || threshold < 0) {
-      showAlert(
-        "Invalid threshold",
-        "Enter a valid low-stock threshold.",
-        "warning"
-      );
-      return;
-    }
-
-   try {
-  setLoading(true);
-
-  const product = await createProduct({
-    name: name.trim(),
-    sku: sku.trim() || null,
-    category_id: null,
-    unit: unit.trim() || "pcs",
-    cost_price: cost,
-    sale_price: sale,
-    stock_qty: stock,
-    low_stock_threshold: threshold,
-    image_url: null,
-    description: null,
-    is_active: true,
-  });
-
-  if (imageUris.length > 0) {
-    await uploadProductImages(
-      product.id,
-      imageUris
+  if (existingProduct) {
+    showAlert(
+      "SKU already exists",
+      `The SKU "${sku.trim()}" is already being used by another product. Please enter a different SKU.`,
+      "warning"
     );
+    return;
+  }
+}
+
+  if (!name.trim()) {
+    showAlert(
+      "Product name required",
+      "Enter the product name.",
+      "warning"
+    );
+    return;
   }
 
-  showAlert(
-    "Product created",
-    `${name.trim()} has been added successfully.`,
-    "success"
-  );
-    } catch (error: any) {
-      console.error(
-        "CREATE PRODUCT ERROR:",
-        error
-      );
+  const cost = Number(costPrice);
+  const sale = Number(salePrice);
+  const stock = Number(stockQty);
+  const threshold = Number(lowStockThreshold);
 
-      showAlert(
-        "Unable to create product",
-        error?.message ||
-          "Something went wrong while creating the product.",
-        "error"
+  if (Number.isNaN(cost) || cost < 0) {
+    showAlert(
+      "Invalid cost price",
+      "Enter a valid cost price.",
+      "warning"
+    );
+    return;
+  }
+
+  if (Number.isNaN(sale) || sale < 0) {
+    showAlert(
+      "Invalid selling price",
+      "Enter a valid selling price.",
+      "warning"
+    );
+    return;
+  }
+
+  if (Number.isNaN(stock) || stock < 0) {
+    showAlert(
+      "Invalid stock",
+      "Enter a valid stock quantity.",
+      "warning"
+    );
+    return;
+  }
+
+  if (Number.isNaN(threshold) || threshold < 0) {
+    showAlert(
+      "Invalid threshold",
+      "Enter a valid low-stock threshold.",
+      "warning"
+    );
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // ==========================================
+    // 1. CREATE PRODUCT
+    // ==========================================
+
+    const productId = await createProduct({
+      name: name.trim(),
+      sku: sku.trim() || null,
+      category_id: null,
+      unit: unit.trim() || "pcs",
+      cost_price: cost,
+      sale_price: sale,
+      stock_qty: stock,
+      low_stock_threshold: threshold,
+      image_url: null,
+      description: null,
+      is_active: true,
+      category: ""
+    });
+
+    console.log("PRODUCT CREATED:", productId);
+
+    if (!productId) {
+      throw new Error(
+        "Product was created but no product ID was returned."
       );
-    } finally {
-      setLoading(false);
     }
+
+    // ==========================================
+    // 2. UPLOAD PRODUCT IMAGES
+    // ==========================================
+
+    if (imageUris.length > 0) {
+      console.log(
+        "UPLOADING PRODUCT IMAGES:",
+        imageUris.length
+      );
+
+      const uploadedImages =
+        await uploadProductImages(
+          productId,
+          imageUris
+        );
+
+      console.log(
+        "IMAGES UPLOADED:",
+        uploadedImages
+      );
+
+      // ==========================================
+      // 3. SAVE IMAGES TO product_images
+      // ==========================================
+
+      console.log(
+        "PRODUCT IMAGES SAVED SUCCESSFULLY"
+      );
+    }
+
+    // ==========================================
+    // 4. SUCCESS
+    // ==========================================
+
+    showAlert(
+      "Product created",
+      `${name.trim()} has been added successfully.`,
+      "success"
+    );
+  } catch (error: any) {
+    console.error(
+      "CREATE PRODUCT ERROR:",
+      error
+    );
+
+    showAlert(
+      "Unable to create product",
+      error?.message ||
+        "Something went wrong while creating the product.",
+      "error"
+    );
+  } finally {
+    setLoading(false);
   }
+}
 
   /*
    * COLLAPSING HEADER

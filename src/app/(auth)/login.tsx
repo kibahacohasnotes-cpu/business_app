@@ -1,5 +1,6 @@
 import { signIn } from "@/lib/auth";
 import { useRouter } from "expo-router";
+import React from "react";
 import { useState } from "react";
 import {
   ActivityIndicator,

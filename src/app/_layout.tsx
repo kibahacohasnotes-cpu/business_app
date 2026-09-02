@@ -5,6 +5,7 @@ import { Stack } from "expo-router";
 import * as Linking from "expo-linking";
 
 import { AuthProvider } from "@/context/AuthContext";
+import React from "react";
 
 export default function RootLayout() {
   useEffect(() => {
