@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import NetInfo from "@react-native-community/netinfo";
 import {
   ArrowLeft,
   CalendarDays,
@@ -24,6 +25,7 @@ import {
 
 import AppAlert from "@/components/ui/AppAlert";
 import Loading from "@/components/ui/Loading";
+import { useTheme } from "@/context/ThemeContext";
 import {
   deleteExpense,
   getExpense,
@@ -48,22 +50,22 @@ function getStatusStyle(status: Expense["status"]) {
   switch (status) {
     case "Paid":
       return {
-        background: "bg-emerald-50",
-        text: "text-emerald-700",
+        background: "bg-emerald-50 dark:bg-emerald-950/40",
+        text: "text-emerald-700 dark:text-emerald-400",
         icon: "#059669",
       };
 
     case "Pending":
       return {
-        background: "bg-amber-50",
-        text: "text-amber-700",
+        background: "bg-amber-50 dark:bg-amber-950/40",
+        text: "text-amber-700 dark:text-amber-400",
         icon: "#d97706",
       };
 
     case "Cancelled":
       return {
-        background: "bg-red-50",
-        text: "text-red-700",
+        background: "bg-red-50 dark:bg-red-950/40",
+        text: "text-red-700 dark:text-red-400",
         icon: "#dc2626",
       };
   }
@@ -71,6 +73,7 @@ function getStatusStyle(status: Expense["status"]) {
 
 export default function ExpenseDetailScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
 
   const { id } = useLocalSearchParams<{
     id: string;
@@ -87,6 +90,10 @@ export default function ExpenseDetailScreen() {
   const [alertMessage, setAlertMessage] = useState("");
 
   const [deleting, setDeleting] = useState(false);
+
+  const iconColor = isDark ? "#ffffff" : "#0f172a";
+  const mutedIconColor = isDark ? "#94a3b8" : "#64748b";
+  const borderColor = isDark ? "border-slate-800" : "border-slate-100";
 
   function showAlert(
     type: "success" | "error" | "warning",
@@ -150,6 +157,20 @@ export default function ExpenseDetailScreen() {
   async function handleDelete() {
     if (!expense) return;
 
+    const network = await NetInfo.fetch();
+
+    if (!network.isConnected) {
+      setAlertVisible(false);
+
+      showAlert(
+        "warning",
+        "You're offline",
+        "You need an internet connection to delete this expense."
+      );
+
+      return;
+    }
+
     try {
       setDeleting(true);
       setAlertVisible(false);
@@ -192,25 +213,25 @@ export default function ExpenseDetailScreen() {
 
   if (!expense) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50 px-6">
-        <View className="h-16 w-16 items-center justify-center rounded-full bg-red-50">
+      <View className="flex-1 items-center justify-center bg-slate-50 px-6 dark:bg-slate-950">
+        <View className="h-16 w-16 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/40">
           <Receipt size={30} color="#dc2626" />
         </View>
 
-        <Text className="mt-5 text-xl font-bold text-slate-950">
+        <Text className="mt-5 text-xl font-bold text-slate-950 dark:text-white">
           Expense not found
         </Text>
 
-        <Text className="mt-2 text-center text-sm leading-6 text-slate-500">
+        <Text className="mt-2 text-center text-sm leading-6 text-slate-500 dark:text-slate-400">
           The expense you're looking for doesn't exist or may
           have been removed.
         </Text>
 
         <Pressable
           onPress={() => router.back()}
-          className="mt-6 rounded-2xl bg-slate-950 px-6 py-4"
+          className="mt-6 rounded-2xl bg-slate-950 px-6 py-4 dark:bg-white"
         >
-          <Text className="font-bold text-white">
+          <Text className="font-bold text-white dark:text-slate-950">
             Go Back
           </Text>
         </Pressable>
@@ -230,28 +251,28 @@ export default function ExpenseDetailScreen() {
   const statusStyle = getStatusStyle(expense.status);
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       {/* HEADER */}
-      <View className="bg-slate-50 px-6 pb-4 pt-14">
+      <View className="bg-slate-50 px-6 pb-4 pt-14 dark:bg-slate-950">
         <View className="flex-row items-center">
           <Pressable
             onPress={() => router.back()}
-            className="h-11 w-11 items-center justify-center rounded-2xl bg-white active:opacity-70"
+            className="h-11 w-11 items-center justify-center rounded-2xl bg-white active:opacity-70 dark:bg-slate-900"
           >
             <ArrowLeft
               size={22}
-              color="#0f172a"
+              color={iconColor}
             />
           </Pressable>
 
           <View className="ml-4 flex-1">
-            <Text className="text-sm font-medium text-slate-500">
+            <Text className="text-sm font-medium text-slate-500 dark:text-slate-400">
               Expense
             </Text>
 
             <Text
               numberOfLines={1}
-              className="mt-1 text-2xl font-bold text-slate-950"
+              className="mt-1 text-2xl font-bold text-slate-950 dark:text-white"
             >
               {expense.title}
             </Text>
@@ -261,11 +282,11 @@ export default function ExpenseDetailScreen() {
             onPress={() =>
               router.push(`/expense/edit/${expense.id}`)
             }
-            className="h-11 w-11 items-center justify-center rounded-2xl bg-white active:opacity-70"
+            className="h-11 w-11 items-center justify-center rounded-2xl bg-white active:opacity-70 dark:bg-slate-900"
           >
             <Pencil
               size={19}
-              color="#0f172a"
+              color={iconColor}
             />
           </Pressable>
         </View>
@@ -276,7 +297,7 @@ export default function ExpenseDetailScreen() {
         contentContainerClassName="px-6 pb-32"
       >
         {/* AMOUNT CARD */}
-        <View className="mt-3 overflow-hidden rounded-3xl bg-slate-950 p-6">
+        <View className="mt-3 overflow-hidden rounded-3xl bg-slate-950 p-6 dark:bg-slate-900">
           <View className="flex-row items-center">
             <View className="h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
               <Wallet
@@ -319,11 +340,11 @@ export default function ExpenseDetailScreen() {
         {/* RECEIPT */}
         {expense.receipt_url && (
           <View className="mt-5">
-            <Text className="mb-3 text-xl font-bold text-slate-950">
+            <Text className="mb-3 text-xl font-bold text-slate-950 dark:text-white">
               Receipt
             </Text>
 
-            <View className="overflow-hidden rounded-3xl bg-white">
+            <View className="overflow-hidden rounded-3xl bg-white dark:bg-slate-900">
               <Image
                 source={{ uri: expense.receipt_url }}
                 className="h-80 w-full"
@@ -336,17 +357,19 @@ export default function ExpenseDetailScreen() {
 
         {/* EXPENSE DETAILS */}
         <View className="mt-6">
-          <Text className="mb-3 text-xl font-bold text-slate-950">
+          <Text className="mb-3 text-xl font-bold text-slate-950 dark:text-white">
             Expense Details
           </Text>
 
-          <View className="overflow-hidden rounded-3xl bg-white">
+          <View className="overflow-hidden rounded-3xl bg-white dark:bg-slate-900">
             {/* CATEGORY */}
-            <View className="flex-row items-center border-b border-slate-100 p-5">
-              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+            <View
+              className={`flex-row items-center border-b p-5 ${borderColor}`}
+            >
+              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                 <Receipt
                   size={20}
-                  color="#0f172a"
+                  color={iconColor}
                 />
               </View>
 
@@ -355,18 +378,20 @@ export default function ExpenseDetailScreen() {
                   Category
                 </Text>
 
-                <Text className="mt-1 text-base font-semibold text-slate-950">
+                <Text className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                   {expense.category}
                 </Text>
               </View>
             </View>
 
             {/* DATE */}
-            <View className="flex-row items-center border-b border-slate-100 p-5">
-              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+            <View
+              className={`flex-row items-center border-b p-5 ${borderColor}`}
+            >
+              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                 <CalendarDays
                   size={20}
-                  color="#0f172a"
+                  color={iconColor}
                 />
               </View>
 
@@ -375,18 +400,20 @@ export default function ExpenseDetailScreen() {
                   Expense Date
                 </Text>
 
-                <Text className="mt-1 text-base font-semibold text-slate-950">
+                <Text className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                   {formatDate(expense.expense_date)}
                 </Text>
               </View>
             </View>
 
             {/* PAYMENT METHOD */}
-            <View className="flex-row items-center border-b border-slate-100 p-5">
-              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+            <View
+              className={`flex-row items-center border-b p-5 ${borderColor}`}
+            >
+              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                 <CreditCard
                   size={20}
-                  color="#0f172a"
+                  color={iconColor}
                 />
               </View>
 
@@ -395,7 +422,7 @@ export default function ExpenseDetailScreen() {
                   Payment Method
                 </Text>
 
-                <Text className="mt-1 text-base font-semibold text-slate-950">
+                <Text className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                   {expense.payment_method || "Not specified"}
                 </Text>
               </View>
@@ -403,11 +430,13 @@ export default function ExpenseDetailScreen() {
 
             {/* VENDOR */}
             {expense.vendor && (
-              <View className="flex-row items-center border-b border-slate-100 p-5">
-                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+              <View
+                className={`flex-row items-center border-b p-5 ${borderColor}`}
+              >
+                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                   <Store
                     size={20}
-                    color="#0f172a"
+                    color={iconColor}
                   />
                 </View>
 
@@ -416,7 +445,7 @@ export default function ExpenseDetailScreen() {
                     Vendor / Supplier
                   </Text>
 
-                  <Text className="mt-1 text-base font-semibold text-slate-950">
+                  <Text className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                     {expense.vendor}
                   </Text>
                 </View>
@@ -425,11 +454,13 @@ export default function ExpenseDetailScreen() {
 
             {/* REFERENCE */}
             {expense.reference && (
-              <View className="flex-row items-center border-b border-slate-100 p-5">
-                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+              <View
+                className={`flex-row items-center border-b p-5 ${borderColor}`}
+              >
+                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                   <FileText
                     size={20}
-                    color="#0f172a"
+                    color={iconColor}
                   />
                 </View>
 
@@ -438,7 +469,7 @@ export default function ExpenseDetailScreen() {
                     Reference
                   </Text>
 
-                  <Text className="mt-1 text-base font-semibold text-slate-950">
+                  <Text className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                     {expense.reference}
                   </Text>
                 </View>
@@ -448,10 +479,10 @@ export default function ExpenseDetailScreen() {
             {/* RECURRING */}
             {expense.is_recurring && (
               <View className="flex-row items-center p-5">
-                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                   <Repeat2
                     size={20}
-                    color="#0f172a"
+                    color={iconColor}
                   />
                 </View>
 
@@ -460,7 +491,7 @@ export default function ExpenseDetailScreen() {
                     Recurring Expense
                   </Text>
 
-                  <Text className="mt-1 text-base font-semibold text-slate-950">
+                  <Text className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                     {expense.recurrence_period || "Recurring"}
                   </Text>
                 </View>
@@ -472,12 +503,12 @@ export default function ExpenseDetailScreen() {
         {/* DESCRIPTION */}
         {expense.description && (
           <View className="mt-6">
-            <Text className="mb-3 text-xl font-bold text-slate-950">
+            <Text className="mb-3 text-xl font-bold text-slate-950 dark:text-white">
               Notes
             </Text>
 
-            <View className="rounded-3xl bg-white p-5">
-              <Text className="text-sm leading-6 text-slate-600">
+            <View className="rounded-3xl bg-white p-5 dark:bg-slate-900">
+              <Text className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                 {expense.description}
               </Text>
             </View>
@@ -486,45 +517,47 @@ export default function ExpenseDetailScreen() {
 
         {/* ACTIONS */}
         <View className="mt-6">
-          <Text className="mb-3 text-xl font-bold text-slate-950">
+          <Text className="mb-3 text-xl font-bold text-slate-950 dark:text-white">
             Actions
           </Text>
 
+          {/* EDIT */}
           <Pressable
             onPress={() =>
               router.push(`/expense/edit/${expense.id}`)
             }
-            className="flex-row items-center rounded-3xl bg-white p-5 active:opacity-70"
+            className="flex-row items-center rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
           >
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
               <Pencil
                 size={20}
-                color="#0f172a"
+                color={iconColor}
               />
             </View>
 
             <View className="ml-4 flex-1">
-              <Text className="text-base font-bold text-slate-950">
+              <Text className="text-base font-bold text-slate-950 dark:text-white">
                 Edit Expense
               </Text>
 
-              <Text className="mt-1 text-xs text-slate-500">
+              <Text className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 Update expense information
               </Text>
             </View>
 
             <ChevronRight
               size={20}
-              color="#94a3b8"
+              color={mutedIconColor}
             />
           </Pressable>
 
+          {/* DELETE */}
           <Pressable
             onPress={handleDeletePress}
             disabled={deleting}
-            className="mt-3 flex-row items-center rounded-3xl bg-red-50 p-5 active:opacity-70"
+            className="mt-3 flex-row items-center rounded-3xl bg-red-50 p-5 active:opacity-70 dark:bg-red-950/30"
           >
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-red-100">
+            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-950/60">
               <Trash2
                 size={20}
                 color="#dc2626"
@@ -532,11 +565,11 @@ export default function ExpenseDetailScreen() {
             </View>
 
             <View className="ml-4 flex-1">
-              <Text className="text-base font-bold text-red-700">
+              <Text className="text-base font-bold text-red-700 dark:text-red-400">
                 Delete Expense
               </Text>
 
-              <Text className="mt-1 text-xs text-red-500">
+              <Text className="mt-1 text-xs text-red-500 dark:text-red-400/80">
                 Permanently remove this expense
               </Text>
             </View>

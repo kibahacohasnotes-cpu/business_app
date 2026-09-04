@@ -252,5 +252,10 @@ export async function getSaleItems(
     throw error;
   }
 
-  return (data ?? []) as SaleItem[];
+  return (data ?? []).map((item) => ({
+  ...item,
+  product: Array.isArray(item.product)
+    ? item.product[0] ?? { image_url: null }
+    : item.product ?? { image_url: null },
+})) as SaleItem[];
 }

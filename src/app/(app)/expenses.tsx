@@ -22,6 +22,7 @@ import {
   TrendingDown,
 } from "lucide-react-native";
 
+import { useTheme } from "@/context/ThemeContext";
 import { getMyBusiness } from "@/lib/business";
 import { getExpenses, Expense } from "@/lib/expenses";
 import { formatMoney } from "@/lib/format";
@@ -34,6 +35,7 @@ type Filter = "all" | "today" | "week" | "month";
 
 export default function Expenses() {
   const router = useRouter();
+  const { isDark } = useTheme();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [businessName, setBusinessName] = useState("My Business");
@@ -167,10 +169,7 @@ export default function Expenses() {
       return CalendarDays;
     }
 
-    if (
-      value.includes("bank") ||
-      value.includes("payment")
-    ) {
+    if (value.includes("bank") || value.includes("payment")) {
       return CreditCard;
     }
 
@@ -181,67 +180,66 @@ export default function Expenses() {
     const value = category.toLowerCase();
 
     if (value.includes("stock")) {
-      return "bg-blue-50";
+      return isDark ? "bg-blue-950" : "bg-blue-50";
     }
 
     if (value.includes("rent")) {
-      return "bg-purple-50";
+      return isDark ? "bg-purple-950" : "bg-purple-50";
     }
 
     if (value.includes("utilities")) {
-      return "bg-amber-50";
+      return isDark ? "bg-amber-950" : "bg-amber-50";
     }
 
     if (value.includes("transport")) {
-      return "bg-orange-50";
+      return isDark ? "bg-orange-950" : "bg-orange-50";
     }
 
-    return "bg-slate-100";
+    return isDark ? "bg-slate-800" : "bg-slate-100";
   }
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
 
       {/* HEADER */}
 
       <Animated.View
         entering={FadeInDown.duration(400)}
-        className="px-6 pb-5 pt-14"
+        className="bg-slate-50 px-6 pb-5 pt-14 dark:bg-slate-950"
       >
         <View className="flex-row items-center">
 
           <Pressable
             onPress={() => router.back()}
-            className="mr-4 h-12 w-12 items-center justify-center rounded-2xl bg-white active:opacity-70"
+            className="mr-4 h-12 w-12 items-center justify-center rounded-2xl bg-white active:opacity-70 dark:bg-slate-900"
           >
             <ArrowLeft
               size={22}
-              color="#0f172a"
+              color={isDark ? "#ffffff" : "#0f172a"}
             />
           </Pressable>
 
           <View className="flex-1">
-            <Text className="text-sm font-medium text-slate-500">
+            <Text className="text-sm font-medium text-slate-500 dark:text-slate-400">
               {businessName}
             </Text>
 
-            <Text className="mt-1 text-3xl font-bold text-slate-950">
+            <Text className="mt-1 text-3xl font-bold text-slate-950 dark:text-white">
               Expenses
             </Text>
           </View>
 
           <Pressable
             onPress={() => router.push("/add-expense")}
-            className="h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 active:opacity-80"
+            className="h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 active:opacity-80 dark:bg-white"
           >
-            <Text className="text-2xl font-light text-white">
+            <Text className="text-2xl font-light text-white dark:text-slate-950">
               +
             </Text>
           </Pressable>
 
         </View>
       </Animated.View>
-
 
       <ScrollView
         className="flex-1"
@@ -251,8 +249,8 @@ export default function Expenses() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={refreshExpenses}
-            tintColor="#0f172a"
-            colors={["#0f172a"]}
+            tintColor={isDark ? "#ffffff" : "#0f172a"}
+            colors={[isDark ? "#ffffff" : "#0f172a"]}
           />
         }
       >
@@ -261,7 +259,7 @@ export default function Expenses() {
 
         <Animated.View
           entering={FadeInDown.delay(100).duration(500)}
-          className="mx-6 rounded-[28px] bg-slate-950 p-6"
+          className="mx-6 rounded-[28px] bg-slate-950 p-6 dark:bg-slate-900"
         >
           <View className="flex-row items-center">
 
@@ -292,21 +290,20 @@ export default function Expenses() {
           </Text>
         </Animated.View>
 
-
         {/* QUICK STATS */}
 
         <View className="mt-4 flex-row gap-3 px-6">
 
           <Animated.View
             entering={FadeInRight.delay(150).duration(400)}
-            className="flex-1 rounded-3xl bg-white p-4"
+            className="flex-1 rounded-3xl bg-white p-4 dark:bg-slate-900"
           >
             <Text className="text-xs text-slate-400">
               Paid
             </Text>
 
             <Text
-              className="mt-2 text-base font-bold text-slate-950"
+              className="mt-2 text-base font-bold text-slate-950 dark:text-white"
               numberOfLines={1}
               adjustsFontSizeToFit
             >
@@ -314,17 +311,16 @@ export default function Expenses() {
             </Text>
           </Animated.View>
 
-
           <Animated.View
             entering={FadeInRight.delay(200).duration(400)}
-            className="flex-1 rounded-3xl bg-white p-4"
+            className="flex-1 rounded-3xl bg-white p-4 dark:bg-slate-900"
           >
             <Text className="text-xs text-slate-400">
               Pending
             </Text>
 
             <Text
-              className="mt-2 text-base font-bold text-slate-950"
+              className="mt-2 text-base font-bold text-slate-950 dark:text-white"
               numberOfLines={1}
               adjustsFontSizeToFit
             >
@@ -334,14 +330,13 @@ export default function Expenses() {
 
         </View>
 
-
         {/* FILTERS */}
 
         <Animated.View
           entering={FadeInDown.delay(250).duration(400)}
           className="mt-7 px-6"
         >
-          <Text className="mb-3 text-xl font-bold text-slate-950">
+          <Text className="mb-3 text-xl font-bold text-slate-950 dark:text-white">
             Overview
           </Text>
 
@@ -366,15 +361,15 @@ export default function Expenses() {
                   }
                   className={`mr-2 rounded-full px-5 py-3 ${
                     active
-                      ? "bg-slate-950"
-                      : "bg-white"
+                      ? "bg-slate-950 dark:bg-white"
+                      : "bg-white dark:bg-slate-900"
                   }`}
                 >
                   <Text
                     className={`text-sm font-semibold ${
                       active
-                        ? "text-white"
-                        : "text-slate-500"
+                        ? "text-white dark:text-slate-950"
+                        : "text-slate-500 dark:text-slate-400"
                     }`}
                   >
                     {item.label}
@@ -386,7 +381,6 @@ export default function Expenses() {
           </ScrollView>
         </Animated.View>
 
-
         {/* EXPENSE LIST */}
 
         <Animated.View
@@ -396,7 +390,7 @@ export default function Expenses() {
 
           <View className="mb-4 flex-row items-center justify-between">
 
-            <Text className="text-xl font-bold text-slate-950">
+            <Text className="text-xl font-bold text-slate-950 dark:text-white">
               Recent Expenses
             </Text>
 
@@ -406,28 +400,27 @@ export default function Expenses() {
 
           </View>
 
-
           {loading ? (
 
-            <View className="rounded-3xl bg-white p-8">
+            <View className="rounded-3xl bg-white p-8 dark:bg-slate-900">
               <ActivityIndicator
                 size="small"
-                color="#0f172a"
+                color={isDark ? "#ffffff" : "#0f172a"}
               />
             </View>
 
           ) : filteredExpenses.length === 0 ? (
 
-            <View className="items-center rounded-3xl bg-white px-6 py-10">
+            <View className="items-center rounded-3xl bg-white px-6 py-10 dark:bg-slate-900">
 
-              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                 <Receipt
                   size={28}
-                  color="#64748b"
+                  color={isDark ? "#94a3b8" : "#64748b"}
                 />
               </View>
 
-              <Text className="mt-5 text-lg font-bold text-slate-950">
+              <Text className="mt-5 text-lg font-bold text-slate-950 dark:text-white">
                 No expenses yet
               </Text>
 
@@ -440,9 +433,9 @@ export default function Expenses() {
                 onPress={() =>
                   router.push("/add-expense")
                 }
-                className="mt-6 rounded-2xl bg-slate-950 px-6 py-3.5 active:opacity-80"
+                className="mt-6 rounded-2xl bg-slate-950 px-6 py-3.5 active:opacity-80 dark:bg-white"
               >
-                <Text className="font-semibold text-white">
+                <Text className="font-semibold text-white dark:text-slate-950">
                   Add Expense
                 </Text>
               </Pressable>
@@ -467,7 +460,7 @@ export default function Expenses() {
                       },
                     })
                   }
-                  className="mb-3 rounded-3xl bg-white p-5 active:opacity-70"
+                  className="mb-3 rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
                 >
 
                   <View className="flex-row items-center">
@@ -479,16 +472,15 @@ export default function Expenses() {
                     >
                       <Icon
                         size={21}
-                        color="#0f172a"
+                        color={isDark ? "#ffffff" : "#0f172a"}
                       />
                     </View>
-
 
                     <View className="ml-4 flex-1">
 
                       <Text
                         numberOfLines={1}
-                        className="font-semibold text-slate-950"
+                        className="font-semibold text-slate-950 dark:text-white"
                       >
                         {expense.title}
                       </Text>
@@ -512,7 +504,7 @@ export default function Expenses() {
 
                         {expense.payment_method && (
                           <>
-                            <View className="mx-2 h-1 w-1 rounded-full bg-slate-300" />
+                            <View className="mx-2 h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
 
                             <Text className="text-xs text-slate-400">
                               {expense.payment_method}
@@ -524,13 +516,12 @@ export default function Expenses() {
 
                     </View>
 
-
                     <View className="items-end">
 
                       <Text
                         numberOfLines={1}
                         adjustsFontSizeToFit
-                        className="max-w-[120px] text-sm font-bold text-slate-950"
+                        className="max-w-[120px] text-sm font-bold text-slate-950 dark:text-white"
                       >
                         {formatExpenseMoney(
                           Number(expense.amount)
@@ -540,19 +531,19 @@ export default function Expenses() {
                       <View
                         className={`mt-2 rounded-full px-2.5 py-1 ${
                           expense.status === "Paid"
-                            ? "bg-emerald-50"
+                            ? "bg-emerald-50 dark:bg-emerald-950"
                             : expense.status === "Pending"
-                              ? "bg-amber-50"
-                              : "bg-red-50"
+                              ? "bg-amber-50 dark:bg-amber-950"
+                              : "bg-red-50 dark:bg-red-950"
                         }`}
                       >
                         <Text
                           className={`text-[10px] font-bold ${
                             expense.status === "Paid"
-                              ? "text-emerald-600"
+                              ? "text-emerald-600 dark:text-emerald-400"
                               : expense.status === "Pending"
-                                ? "text-amber-600"
-                                : "text-red-500"
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-red-500 dark:text-red-400"
                           }`}
                         >
                           {expense.status}
@@ -563,7 +554,7 @@ export default function Expenses() {
 
                     <ChevronRight
                       size={17}
-                      color="#cbd5e1"
+                      color={isDark ? "#475569" : "#cbd5e1"}
                       className="ml-2"
                     />
 
@@ -579,7 +570,6 @@ export default function Expenses() {
 
       </ScrollView>
 
-
       {/* FLOATING ADD BUTTON */}
 
       {filteredExpenses.length > 0 && (
@@ -587,7 +577,7 @@ export default function Expenses() {
           onPress={() =>
             router.push("/add-expense")
           }
-          className="absolute bottom-7 right-6 h-16 w-16 items-center justify-center rounded-full bg-slate-950 active:opacity-80"
+          className="absolute bottom-7 right-6 h-16 w-16 items-center justify-center rounded-full bg-slate-950 active:opacity-80 dark:bg-white"
           style={{
             elevation: 8,
             shadowColor: "#000",
@@ -599,7 +589,7 @@ export default function Expenses() {
             },
           }}
         >
-          <Text className="text-3xl font-light text-white">
+          <Text className="text-3xl font-light text-white dark:text-slate-950">
             +
           </Text>
         </Pressable>

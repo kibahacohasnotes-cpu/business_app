@@ -389,7 +389,93 @@ export async function getCustomerAccount(
 }
 
 
+/* =========================================================
+   CUSTOMER PAYMENT TYPE
+========================================================= */
 
+export type Payment = {
+  id: string;
+  amount: number;
+  payment_method: string;
+  payment_date: string;
+  reference: string | null;
+  sale_id?: string;
+};
+
+export type CustomerPayment = Payment;
+/* =========================================================
+   GET CUSTOMER PAYMENTS
+========================================================= */
+
+export async function getCustomerPayments(
+  customerId: string
+): Promise<CustomerPayment[]> {
+  const business = await getMyBusiness();
+
+  if (!business) {
+    throw new Error("Business not found.");
+  }
+
+  const { data, error } = await supabase
+    .from("payments")
+    .select(`
+      id,
+      amount,
+      payment_method,
+      payment_date,
+      reference,
+      sale_id
+    `)
+    .eq("business_id", business.id)
+    .order("payment_date", {
+      ascending: false,
+    });
+
+  if (error) {
+    console.error(
+      "GET CUSTOMER PAYMENTS ERROR:",
+      error
+    );
+
+    throw error;
+  }
+
+  if (!data || data.length === 0) {
+    return [];
+  }
+
+  const { data: sales, error: salesError } =
+    await supabase
+      .from("sales")
+      .select("id")
+      .eq("business_id", business.id)
+      .eq("customer_id", customerId);
+
+  if (salesError) {
+    console.error(
+      "GET CUSTOMER PAYMENT SALES ERROR:",
+      salesError
+    );
+
+    throw salesError;
+  }
+
+  const saleIds = new Set(
+    (sales ?? []).map((sale) => sale.id)
+  );
+
+  return data
+    .filter((payment) =>
+      saleIds.has(payment.sale_id)
+    )
+    .map((payment) => ({
+      id: payment.id,
+      amount: Number(payment.amount),
+      payment_method: payment.payment_method,
+      payment_date: payment.payment_date,
+      reference: payment.reference,
+    }));
+}
 
 
 

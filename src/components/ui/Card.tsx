@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { View } from "react-native";
-
+import React from "react";
 type CardProps = {
   children: ReactNode;
   className?: string;

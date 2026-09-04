@@ -1,4 +1,4 @@
-import {
+import React, {
   createContext,
   useContext,
   useEffect,
@@ -31,54 +31,42 @@ export function AuthProvider({
   useEffect(() => {
     let mounted = true;
 
-    async function loadSession() {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error("SESSION ERROR:", error);
-
-          await supabase.auth.signOut();
-
-          if (mounted) {
-            setSession(null);
-          }
-
-          return;
-        }
-
-        if (mounted) {
-          setSession(session);
-        }
-      } catch (error) {
-        console.error("AUTH INITIALIZATION ERROR:", error);
-
-        await supabase.auth.signOut();
-
-        if (mounted) {
-          setSession(null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadSession();
-
+    // Listen for auth changes immediately.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (mounted) {
-          setSession(session);
-        }
+      (_event, currentSession) => {
+        if (!mounted) return;
+
+        setSession(currentSession);
+        setLoading(false);
       }
     );
+
+    // Check the existing session.
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!mounted) return;
+
+        if (error) {
+          console.error("SESSION ERROR:", error);
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+
+        setSession(data.session);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("AUTH INITIALIZATION ERROR:", error);
+
+        if (mounted) {
+          setSession(null);
+          setLoading(false);
+        }
+      });
 
     return () => {
       mounted = false;

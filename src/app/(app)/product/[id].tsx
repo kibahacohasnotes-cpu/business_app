@@ -1,12 +1,3 @@
-import {
-  deleteProduct,
-  getProductImages,
-  updateProduct,
-  type Product,
-  type ProductImage,
-} from "@/lib/products";
-import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -19,7 +10,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Switch,
   Text,
   TextInput,
@@ -33,14 +23,25 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from "react-native-reanimated";
-import AppAlert from "@/components/ui/AppAlert";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
+import AppAlert from "@/components/ui/AppAlert";
+import { useTheme } from "@/context/ThemeContext";
+import {
+  deleteProduct,
+  getProductImages,
+  updateProduct,
+  type Product,
+  type ProductImage,
+} from "@/lib/products";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { isDark } = useTheme();
 
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =  Dimensions.get("window");
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
   const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.4;
   const COLLAPSED_IMAGE_HEIGHT = IMAGE_HEIGHT * 0.7;
 
@@ -52,27 +53,29 @@ export default function ProductDetailScreen() {
 
   const scrollY = useSharedValue(0);
 
-const scrollHandler = useAnimatedScrollHandler({
-  onScroll: (event) => {
-    scrollY.value = Math.max(
-      0,
-      event.contentOffset.y
+  const iconColor = isDark ? "#ffffff" : "#0f172a";
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = Math.max(
+        0,
+        event.contentOffset.y
+      );
+    },
+  });
+
+  const heroAnimatedStyle = useAnimatedStyle(() => {
+    const height = interpolate(
+      scrollY.value,
+      [0, IMAGE_HEIGHT * 0.5],
+      [IMAGE_HEIGHT, COLLAPSED_IMAGE_HEIGHT],
+      Extrapolation.CLAMP
     );
-  },
-});
 
-const heroAnimatedStyle = useAnimatedStyle(() => {
-  const height = interpolate(
-    scrollY.value,
-    [0, IMAGE_HEIGHT * 0.5],
-    [IMAGE_HEIGHT, COLLAPSED_IMAGE_HEIGHT],
-    Extrapolation.CLAMP
-  );
-
-  return {
-    height,
-  };
-});
+    return {
+      height,
+    };
+  });
 
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
@@ -89,40 +92,28 @@ const heroAnimatedStyle = useAnimatedStyle(() => {
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState<"success" | "error" | "warning">("success");
-  const [alertAction, setAlertAction] = useState<"close" | "back" | "delete-confirm" >("close");
+  const [alertAction, setAlertAction] = useState<"close" | "back" | "delete-confirm">("close");
   const [alertButtonText, setAlertButtonText] = useState("Done");
   const [alertCancelText, setAlertCancelText] = useState("Cancel");
 
   const [alertConfirmAction, setAlertConfirmAction] = useState<(() => void) | undefined>();
 
-function showAlert(
-  title: string,
-  message: string,
-  type: "success" | "error" | "warning" = "success",
-  buttonText = "Done",
-  onConfirm?: () => void,
-  cancelText = "Cancel"
-) {
-  setAlertTitle(title);
-  setAlertMessage(message);
-  setAlertType(type);
-  setAlertButtonText(buttonText);
-  setAlertCancelText(cancelText);
-  setAlertConfirmAction(() => onConfirm);
-  setAlertVisible(true);
-}
-
-   function handleAlertClose() {
-      setAlertVisible(false);
-
-      if (alertAction === "back") {
-        router.back();
-      }
-
-      if (alertAction === "delete-confirm") {
-        confirmDelete();
-      }
-    }
+  function showAlert(
+    title: string,
+    message: string,
+    type: "success" | "error" | "warning" = "success",
+    buttonText = "Done",
+    onConfirm?: () => void,
+    cancelText = "Cancel"
+  ) {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertType(type);
+    setAlertButtonText(buttonText);
+    setAlertCancelText(cancelText);
+    setAlertConfirmAction(() => onConfirm);
+    setAlertVisible(true);
+  }
 
   const loadProduct = useCallback(async () => {
     try {
@@ -132,8 +123,6 @@ function showAlert(
         throw new Error("Product ID is missing");
       }
 
-      // getProducts needs a business ID, so instead we fetch
-      // the product directly by its ID.
       const { supabase } = await import("@/lib/supabase");
 
       const { data, error } = await supabase
@@ -201,6 +190,7 @@ function showAlert(
         "Enter the product name.",
         "warning"
       );
+      return;
     }
 
     const cost = Number(costPrice);
@@ -210,34 +200,38 @@ function showAlert(
 
     if (Number.isNaN(cost) || cost < 0) {
       showAlert(
-  "Invalid cost price",
-  "Enter a valid cost price.",
-  "warning"
-);
+        "Invalid cost price",
+        "Enter a valid cost price.",
+        "warning"
+      );
+      return;
     }
 
     if (Number.isNaN(sale) || sale < 0) {
       showAlert(
-  "Invalid selling price",
-  "Enter a valid selling price.",
-  "warning"
-);
+        "Invalid selling price",
+        "Enter a valid selling price.",
+        "warning"
+      );
+      return;
     }
 
     if (Number.isNaN(stock) || stock < 0) {
       showAlert(
-  "Invalid stock",
-  "Enter a valid stock quantity.",
-  "warning"
-);
+        "Invalid stock",
+        "Enter a valid stock quantity.",
+        "warning"
+      );
+      return;
     }
 
     if (Number.isNaN(threshold) || threshold < 0) {
       showAlert(
-  "Invalid threshold",
-  "Enter a valid low-stock threshold.",
-  "warning"
-);
+        "Invalid threshold",
+        "Enter a valid low-stock threshold.",
+        "warning"
+      );
+      return;
     }
 
     try {
@@ -255,17 +249,17 @@ function showAlert(
         is_active: isActive,
       });
 
-        showAlert(
-      "Product updated",
-      `${name.trim()} has been updated successfully.`,
-      "success",
-      "Done",
-      () => router.back()
-    );
+      showAlert(
+        "Product updated",
+        `${name.trim()} has been updated successfully.`,
+        "success",
+        "Done",
+        () => router.back()
+      );
     } catch (error: any) {
       console.error("UPDATE PRODUCT ERROR:", error);
 
-          showAlert(
+      showAlert(
         "Unable to update product",
         error?.message ||
           "Something went wrong while updating the product.",
@@ -276,60 +270,60 @@ function showAlert(
     }
   }
 
-function handleDelete() {
-  if (!product) {
-    return;
-  }
-
-  showAlert(
-    "Delete product?",
-    `Are you sure you want to delete "${product.name}"? This action cannot be undone.`,
-    "warning",
-    "Delete",
-    confirmDelete,
-    "Cancel"
-  );
-}
-
-async function confirmDelete() {
-  if (!product) {
-    return;
-  }
-
-  try {
-    setSaving(true);
-
-    await deleteProduct(product.id);
+  function handleDelete() {
+    if (!product) {
+      return;
+    }
 
     showAlert(
-      "Product deleted",
-      "The product has been removed from your inventory.",
-      "success",
-      "back"
+      "Delete product?",
+      `Are you sure you want to delete "${product.name}"? This action cannot be undone.`,
+      "warning",
+      "Delete",
+      confirmDelete,
+      "Cancel"
     );
-  } catch (error: any) {
-    console.error("DELETE PRODUCT ERROR:", error);
-
-    showAlert(
-      "Unable to delete product",
-      error?.message ||
-        "Something went wrong while deleting the product.",
-      "error"
-    );
-  } finally {
-    setSaving(false);
   }
-}
+
+  async function confirmDelete() {
+    if (!product) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await deleteProduct(product.id);
+
+      showAlert(
+        "Product deleted",
+        "The product has been removed from your inventory.",
+        "success",
+        "back"
+      );
+    } catch (error: any) {
+      console.error("DELETE PRODUCT ERROR:", error);
+
+      showAlert(
+        "Unable to delete product",
+        error?.message ||
+          "Something went wrong while deleting the product.",
+        "error"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50">
+      <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
         <ActivityIndicator
           size="large"
-          color="#0f172a"
+          color={iconColor}
         />
 
-        <Text className="mt-4 text-sm text-slate-400">
+        <Text className="mt-4 text-sm text-slate-400 dark:text-slate-400">
           Loading product...
         </Text>
       </View>
@@ -338,22 +332,22 @@ async function confirmDelete() {
 
   if (!product) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50 px-6">
+      <View className="flex-1 items-center justify-center bg-slate-50 px-6 dark:bg-slate-950">
         <Ionicons
           name="cube-outline"
           size={50}
           color="#94a3b8"
         />
 
-        <Text className="mt-4 text-xl font-bold text-slate-900">
+        <Text className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
           Product not found
         </Text>
 
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mt-6 rounded-2xl bg-slate-950 px-6 py-3"
+          className="mt-6 rounded-2xl bg-slate-950 px-6 py-3 dark:bg-white"
         >
-          <Text className="font-semibold text-white">
+          <Text className="font-semibold text-white dark:text-slate-950">
             Go back
           </Text>
         </TouchableOpacity>
@@ -364,389 +358,375 @@ async function confirmDelete() {
   const stock = Number(stockQty);
   const threshold = Number(lowStockThreshold);
 
-  const isLowStock =
-    stock <= threshold;
+  const isLowStock = stock <= threshold;
 
-
-return (
-  <KeyboardAvoidingView
-    className="flex-1 bg-slate-50"
-    behavior={
-      Platform.OS === "ios"
-        ? "padding"
-        : undefined
-    }
-  >
-    {/* =====================================================
-        FIXED COLLAPSING HERO
-    ===================================================== */}
-
-    <Animated.View
-      style={[
-        {
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 20,
-          elevation: 20,
-          width: SCREEN_WIDTH,
-          overflow: "hidden",
-          backgroundColor: "#e2e8f0",
-        },
-        heroAnimatedStyle,
-      ]}
+  return (
+    <KeyboardAvoidingView
+      className="flex-1 bg-slate-50 dark:bg-slate-950"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {productImages.length > 0 ? (
-        <FlatList
-          data={productImages}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          bounces={false}
-          keyExtractor={(item) => item.id}
-          style={{ flex: 1 }}
-          renderItem={({ item }) => (
-            <View
-              style={{
-                width: SCREEN_WIDTH,
-                height: IMAGE_HEIGHT,
-              }}
-            >
-              <Image
-                source={{ uri: item.image_url }}
+      {/* =====================================================
+          FIXED COLLAPSING HERO
+      ===================================================== */}
+
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 20,
+            elevation: 20,
+            width: SCREEN_WIDTH,
+            overflow: "hidden",
+            backgroundColor: isDark ? "#0f172a" : "#e2e8f0",
+          },
+          heroAnimatedStyle,
+        ]}
+      >
+        {productImages.length > 0 ? (
+          <FlatList
+            data={productImages}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            keyExtractor={(item) => item.id}
+            style={{ flex: 1 }}
+            renderItem={({ item }) => (
+              <View
                 style={{
                   width: SCREEN_WIDTH,
                   height: IMAGE_HEIGHT,
                 }}
-                resizeMode="cover"
-              />
-            </View>
-          )}
-          onMomentumScrollEnd={(event) => {
-            const index = Math.round(
-              event.nativeEvent.contentOffset.x /
-                SCREEN_WIDTH
-            );
+              >
+                <Image
+                  source={{ uri: item.image_url }}
+                  style={{
+                    width: SCREEN_WIDTH,
+                    height: IMAGE_HEIGHT,
+                  }}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+            onMomentumScrollEnd={(event) => {
+              const index = Math.round(
+                event.nativeEvent.contentOffset.x / SCREEN_WIDTH
+              );
 
-            setActiveImageIndex(index);
-          }}
-        />
-      ) : (
-        <View className="flex-1 items-center justify-center bg-slate-200">
-          <Ionicons
-            name="images-outline"
-            size={48}
-            color="#94a3b8"
+              setActiveImageIndex(index);
+            }}
           />
-
-          <Text className="mt-3 text-sm font-medium text-slate-500">
-            No product images
-          </Text>
-        </View>
-      )}
-
-      {/* DARK OVERLAY */}
-
-      <View className="absolute bottom-0 left-0 right-0 h-28 bg-black/20" />
-
-      {/* =================================================
-          FIXED BACK BUTTON
-      ================================================= */}
-
-      <TouchableOpacity
-        onPress={() => router.back()}
-        activeOpacity={0.8}
-        className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90"
-      >
-        <Ionicons
-          name="arrow-back"
-          size={22}
-          color="#0f172a"
-        />
-      </TouchableOpacity>
-
-      {/* =================================================
-          FIXED ACTIVE STATUS
-      ================================================= */}
-
-      <View className="absolute right-5 top-14">
-        <View
-          className={`rounded-full px-3 py-2 ${
-            product.is_active
-              ? "bg-green-50/95"
-              : "bg-white/90"
-          }`}
-        >
-          <Text
-            className={`text-xs font-bold ${
-              product.is_active
-                ? "text-green-600"
-                : "text-slate-500"
-            }`}
-          >
-            {product.is_active
-              ? "ACTIVE"
-              : "INACTIVE"}
-          </Text>
-        </View>
-      </View>
-
-      {/* IMAGE COUNTER */}
-
-      {productImages.length > 1 && (
-        <View className="absolute bottom-5 right-5 rounded-full bg-black/60 px-3 py-2">
-          <Text className="text-xs font-bold text-white">
-            {activeImageIndex + 1} /{" "}
-            {productImages.length}
-          </Text>
-        </View>
-      )}
-
-      {/* PAGINATION */}
-
-      {productImages.length > 1 && (
-        <View className="absolute bottom-5 left-0 right-0 flex-row items-center justify-center">
-          {productImages.map((_, index) => (
-            <View
-              key={index}
-              className={`mx-1 h-2 rounded-full ${
-                index === activeImageIndex
-                  ? "w-6 bg-white"
-                  : "w-2 bg-white/60"
-              }`}
-            />
-          ))}
-        </View>
-      )}
-    </Animated.View>
-
-    {/* =====================================================
-        SCROLLING CONTENT
-    ===================================================== */}
-
-    <Animated.ScrollView
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-      onScroll={scrollHandler}
-      scrollEventThrottle={16}
-      contentContainerStyle={{
-        paddingTop: IMAGE_HEIGHT,
-        paddingBottom: 50,
-      }}
-    >
-      {/* PRODUCT TITLE */}
-
-      <View className="px-5 pt-5">
-        <Text className="text-2xl font-bold text-slate-950">
-          {product.name}
-        </Text>
-
-        <Text className="mt-1 text-sm text-slate-400">
-          {product.sku
-            ? `SKU: ${product.sku}`
-            : "No SKU"}
-        </Text>
-
-        {isLowStock && (
-          <View className="mt-4 flex-row items-center rounded-2xl bg-orange-50 px-4 py-3">
+        ) : (
+          <View className="flex-1 items-center justify-center bg-slate-200 dark:bg-slate-900">
             <Ionicons
-              name="warning-outline"
-              size={18}
-              color="#f97316"
+              name="images-outline"
+              size={48}
+              color="#94a3b8"
             />
 
-            <Text className="ml-2 text-sm font-semibold text-orange-600">
-              This product is low on stock
+            <Text className="mt-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+              No product images
             </Text>
           </View>
         )}
-      </View>
 
-      {/* BASIC INFORMATION */}
+        {/* DARK OVERLAY */}
 
-      <View className="mx-5 mt-5 rounded-3xl bg-white p-5">
-        <Text className="mb-5 text-lg font-bold text-slate-900">
-          Product information
-        </Text>
+        <View className="absolute bottom-0 left-0 right-0 h-28 bg-black/20" />
 
-        <Field
-          label="Product name"
-          value={name}
-          onChangeText={setName}
-          placeholder="Product name"
-        />
+        {/* =================================================
+            FIXED BACK BUTTON
+        ================================================= */}
 
-        <Field
-          label="SKU"
-          value={sku}
-          onChangeText={setSku}
-          placeholder="e.g. CC-500"
-          autoCapitalize="characters"
-        />
-
-        <Field
-          label="Unit"
-          value={unit}
-          onChangeText={setUnit}
-          placeholder="e.g. pcs, kg, box"
-        />
-
-        <View className="mb-4">
-          <Text className="mb-2 text-sm font-semibold text-slate-700">
-            Description
-          </Text>
-
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Product description"
-            placeholderTextColor="#94a3b8"
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            className="min-h-[110px] rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900"
+        <TouchableOpacity
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+          className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90 dark:bg-slate-900/90"
+        >
+          <Ionicons
+            name="arrow-back"
+            size={22}
+            color={iconColor}
           />
-        </View>
-      </View>
+        </TouchableOpacity>
 
-      {/* PRICING */}
+        {/* =================================================
+            FIXED ACTIVE STATUS
+        ================================================= */}
 
-      <View className="mx-5 mt-5 rounded-3xl bg-white p-5">
-        <Text className="mb-5 text-lg font-bold text-slate-900">
-          Pricing
-        </Text>
-
-        <Field
-          label="Cost price"
-          value={costPrice}
-          onChangeText={setCostPrice}
-          placeholder="0"
-          keyboardType="decimal-pad"
-        />
-
-        <Field
-          label="Selling price"
-          value={salePrice}
-          onChangeText={setSalePrice}
-          placeholder="0"
-          keyboardType="decimal-pad"
-        />
-      </View>
-
-      {/* INVENTORY */}
-
-      <View className="mx-5 mt-5 rounded-3xl bg-white p-5">
-        <Text className="mb-5 text-lg font-bold text-slate-900">
-          Inventory
-        </Text>
-
-        <Field
-          label="Stock quantity"
-          value={stockQty}
-          onChangeText={setStockQty}
-          placeholder="0"
-          keyboardType="decimal-pad"
-        />
-
-        <Field
-          label="Low-stock threshold"
-          value={lowStockThreshold}
-          onChangeText={setLowStockThreshold}
-          placeholder="5"
-          keyboardType="decimal-pad"
-        />
-
-        <View className="mt-2 flex-row items-center justify-between rounded-2xl bg-slate-50 px-4 py-4">
-          <View className="flex-1">
-            <Text className="text-base font-semibold text-slate-900">
-              Product active
-            </Text>
-
-            <Text className="mt-1 text-xs text-slate-400">
-              Active products can be used in your inventory
+        <View className="absolute right-5 top-14">
+          <View
+            className={`rounded-full px-3 py-2 ${
+              product.is_active
+                ? "bg-green-50/95 dark:bg-green-950/80"
+                : "bg-white/90 dark:bg-slate-900/90"
+            }`}
+          >
+            <Text
+              className={`text-xs font-bold ${
+                product.is_active
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-slate-500 dark:text-slate-400"
+              }`}
+            >
+              {product.is_active ? "ACTIVE" : "INACTIVE"}
             </Text>
           </View>
-
-          <Switch
-            value={isActive}
-            onValueChange={setIsActive}
-          />
         </View>
-      </View>
 
-      {/* SAVE / DELETE */}
+        {/* IMAGE COUNTER */}
 
-      <View className="mx-5 mt-5">
-        <TouchableOpacity
-          activeOpacity={0.85}
-          disabled={saving}
-          onPress={handleSave}
-          className={`mb-3 items-center rounded-2xl py-4 ${
-            saving
-              ? "bg-slate-400"
-              : "bg-slate-950"
-          }`}
-        >
-          {saving ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <View className="flex-row items-center">
+        {productImages.length > 1 && (
+          <View className="absolute bottom-5 right-5 rounded-full bg-black/60 px-3 py-2">
+            <Text className="text-xs font-bold text-white">
+              {activeImageIndex + 1} / {productImages.length}
+            </Text>
+          </View>
+        )}
+
+        {/* PAGINATION */}
+
+        {productImages.length > 1 && (
+          <View className="absolute bottom-5 left-0 right-0 flex-row items-center justify-center">
+            {productImages.map((_, index) => (
+              <View
+                key={index}
+                className={`mx-1 h-2 rounded-full ${
+                  index === activeImageIndex
+                    ? "w-6 bg-white"
+                    : "w-2 bg-white/60"
+                }`}
+              />
+            ))}
+          </View>
+        )}
+      </Animated.View>
+
+      {/* =====================================================
+          SCROLLING CONTENT
+      ===================================================== */}
+
+      <Animated.ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        contentContainerStyle={{
+          paddingTop: IMAGE_HEIGHT,
+          paddingBottom: 50,
+        }}
+      >
+        {/* PRODUCT TITLE */}
+
+        <View className="px-5 pt-5">
+          <Text className="text-2xl font-bold text-slate-950 dark:text-white">
+            {product.name}
+          </Text>
+
+          <Text className="mt-1 text-sm text-slate-400 dark:text-slate-400">
+            {product.sku ? `SKU: ${product.sku}` : "No SKU"}
+          </Text>
+
+          {isLowStock && (
+            <View className="mt-4 flex-row items-center rounded-2xl bg-orange-50 px-4 py-3 dark:bg-orange-950/40">
               <Ionicons
-                name="checkmark-circle-outline"
-                size={21}
-                color="#ffffff"
+                name="warning-outline"
+                size={18}
+                color="#f97316"
               />
 
-              <Text className="ml-2 text-base font-bold text-white">
-                Save Changes
+              <Text className="ml-2 text-sm font-semibold text-orange-600 dark:text-orange-400">
+                This product is low on stock
               </Text>
             </View>
           )}
-        </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          activeOpacity={0.8}
-          disabled={saving}
-          onPress={handleDelete}
-          className="items-center rounded-2xl bg-red-50 py-4"
-        >
-          <View className="flex-row items-center">
-            <Ionicons
-              name="trash-outline"
-              size={20}
-              color="#dc2626"
-            />
+        {/* BASIC INFORMATION */}
 
-            <Text className="ml-2 text-base font-bold text-red-600">
-              Delete Product
+        <View className="mx-5 mt-5 rounded-3xl bg-white p-5 dark:bg-slate-900">
+          <Text className="mb-5 text-lg font-bold text-slate-900 dark:text-white">
+            Product information
+          </Text>
+
+          <Field
+            label="Product name"
+            value={name}
+            onChangeText={setName}
+            placeholder="Product name"
+          />
+
+          <Field
+            label="SKU"
+            value={sku}
+            onChangeText={setSku}
+            placeholder="e.g. CC-500"
+            autoCapitalize="characters"
+          />
+
+          <Field
+            label="Unit"
+            value={unit}
+            onChangeText={setUnit}
+            placeholder="e.g. pcs, kg, box"
+          />
+
+          <View className="mb-4">
+            <Text className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Description
             </Text>
+
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Product description"
+              placeholderTextColor="#94a3b8"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              className="min-h-[110px] rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900 dark:bg-slate-800 dark:text-white"
+            />
           </View>
-        </TouchableOpacity>
-      </View>
-    </Animated.ScrollView>
+        </View>
 
-    <AppAlert
-      visible={alertVisible}
-      title={alertTitle}
-      message={alertMessage}
-      type={alertType}
-      buttonText={alertButtonText}
-      cancelText={alertCancelText}
-      onClose={() => setAlertVisible(false)}
-      onConfirm={
-        alertConfirmAction
-          ? () => {
-              setAlertVisible(false);
-              alertConfirmAction();
-            }
-          : undefined
-      }
-    />
-  </KeyboardAvoidingView>
-);
+        {/* PRICING */}
 
+        <View className="mx-5 mt-5 rounded-3xl bg-white p-5 dark:bg-slate-900">
+          <Text className="mb-5 text-lg font-bold text-slate-900 dark:text-white">
+            Pricing
+          </Text>
 
+          <Field
+            label="Cost price"
+            value={costPrice}
+            onChangeText={setCostPrice}
+            placeholder="0"
+            keyboardType="decimal-pad"
+          />
+
+          <Field
+            label="Selling price"
+            value={salePrice}
+            onChangeText={setSalePrice}
+            placeholder="0"
+            keyboardType="decimal-pad"
+          />
+        </View>
+
+        {/* INVENTORY */}
+
+        <View className="mx-5 mt-5 rounded-3xl bg-white p-5 dark:bg-slate-900">
+          <Text className="mb-5 text-lg font-bold text-slate-900 dark:text-white">
+            Inventory
+          </Text>
+
+          <Field
+            label="Stock quantity"
+            value={stockQty}
+            onChangeText={setStockQty}
+            placeholder="0"
+            keyboardType="decimal-pad"
+          />
+
+          <Field
+            label="Low-stock threshold"
+            value={lowStockThreshold}
+            onChangeText={setLowStockThreshold}
+            placeholder="5"
+            keyboardType="decimal-pad"
+          />
+
+          <View className="mt-2 flex-row items-center justify-between rounded-2xl bg-slate-50 px-4 py-4 dark:bg-slate-800">
+            <View className="flex-1">
+              <Text className="text-base font-semibold text-slate-900 dark:text-white">
+                Product active
+              </Text>
+
+              <Text className="mt-1 text-xs text-slate-400 dark:text-slate-400">
+                Active products can be used in your inventory
+              </Text>
+            </View>
+
+            <Switch
+              value={isActive}
+              onValueChange={setIsActive}
+            />
+          </View>
+        </View>
+
+        {/* SAVE / DELETE */}
+
+        <View className="mx-5 mt-5">
+          <TouchableOpacity
+            activeOpacity={0.85}
+            disabled={saving}
+            onPress={handleSave}
+            className={`mb-3 items-center rounded-2xl py-4 ${
+              saving
+                ? "bg-slate-400 dark:bg-slate-700"
+                : "bg-slate-950 dark:bg-white"
+            }`}
+          >
+            {saving ? (
+              <ActivityIndicator color={isDark ? "#0f172a" : "#ffffff"} />
+            ) : (
+              <View className="flex-row items-center">
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={21}
+                  color={isDark ? "#0f172a" : "#ffffff"}
+                />
+
+                <Text className="ml-2 text-base font-bold text-white dark:text-slate-950">
+                  Save Changes
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            disabled={saving}
+            onPress={handleDelete}
+            className="items-center rounded-2xl bg-red-50 py-4 dark:bg-red-950/30"
+          >
+            <View className="flex-row items-center">
+              <Ionicons
+                name="trash-outline"
+                size={20}
+                color={isDark ? "#f87171" : "#dc2626"}
+              />
+
+              <Text className="ml-2 text-base font-bold text-red-600 dark:text-red-400">
+                Delete Product
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </Animated.ScrollView>
+
+      <AppAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+        buttonText={alertButtonText}
+        cancelText={alertCancelText}
+        onClose={() => setAlertVisible(false)}
+        onConfirm={
+          alertConfirmAction
+            ? () => {
+                setAlertVisible(false);
+                alertConfirmAction();
+              }
+            : undefined
+        }
+      />
+    </KeyboardAvoidingView>
+  );
 }
 
 function Field({
@@ -766,7 +746,7 @@ function Field({
 }) {
   return (
     <View className="mb-4">
-      <Text className="mb-2 text-sm font-semibold text-slate-700">
+      <Text className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
         {label}
       </Text>
 
@@ -777,12 +757,8 @@ function Field({
         placeholderTextColor="#94a3b8"
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
-        className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900"
+        className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900 dark:bg-slate-800 dark:text-white"
       />
     </View>
   );
-}
-
-function confirmDelete() {
-  throw new Error("Function not implemented.");
 }

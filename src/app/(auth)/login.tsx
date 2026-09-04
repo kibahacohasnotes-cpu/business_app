@@ -1,9 +1,11 @@
+import { useTheme } from "@/context/ThemeContext";
 import { signIn } from "@/lib/auth";
 import { useRouter } from "expo-router";
+import NetInfo from "@react-native-community/netinfo";
 import React, { useRef, useState } from "react";
+import AppAlert from "@/components/ui/AppAlert";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   FlatList,
   NativeScrollEvent,
@@ -15,6 +17,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 
 const { width } = Dimensions.get("window");
 
@@ -51,14 +54,14 @@ const slides: Slide[] = [
     id: "4",
     image: require("../../../assets/apps/4.jpg"),
     title: "Understand your business",
-    description:
-      "Sales Tracking.",
+    description: "Sales Tracking.",
   },
 ];
 
 export default function LoginScreen() {
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
+  const { isDark } = useTheme();
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
@@ -67,8 +70,27 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState<
+    "success" | "error" | "warning"
+  >("error");
 
-  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+  function showAlert(
+    title: string,
+    message: string,
+    type: "success" | "error" | "warning" = "error"
+  ) {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertType(type);
+    setAlertVisible(true);
+  }
+
+  function handleScroll(
+    event: NativeSyntheticEvent<NativeScrollEvent>
+  ) {
     const offsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / width);
 
@@ -88,23 +110,36 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email.trim() || !password) {
-      Alert.alert(
+      showAlert(
         "Missing information",
-        "Enter your email and password."
+        "Enter your email and password.",
+        "warning"
       );
       return;
     }
 
     try {
+      const network = await NetInfo.fetch();
+
+      if (!network.isConnected) {
+        showAlert(
+          "You're offline",
+          "Please connect to the internet before signing in.",
+          "warning"
+        );
+        return;
+      }
+
       setLoading(true);
 
       await signIn(email, password);
 
       router.replace("/");
     } catch (error: any) {
-      Alert.alert(
+      showAlert(
         "Login failed",
-        error?.message ?? "Unable to sign in."
+        error?.message ?? "Unable to sign in.",
+        "error"
       );
     } finally {
       setLoading(false);
@@ -114,6 +149,7 @@ export default function LoginScreen() {
   // -----------------------------------------
   // LOGIN FORM
   // -----------------------------------------
+
   if (showLogin) {
     return (
       <View
@@ -121,10 +157,11 @@ export default function LoginScreen() {
           flex: 1,
           padding: 24,
           justifyContent: "center",
-          backgroundColor: "#fff",
+          backgroundColor: isDark ? "#020617" : "#ffffff",
         }}
       >
         {/* Back button */}
+
         <TouchableOpacity
           onPress={() => setShowLogin(false)}
           style={{
@@ -134,7 +171,7 @@ export default function LoginScreen() {
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: "#f3f4f6",
+            backgroundColor: isDark ? "#1e293b" : "#f3f4f6",
             alignItems: "center",
             justifyContent: "center",
           }}
@@ -142,7 +179,7 @@ export default function LoginScreen() {
           <Ionicons
             name="arrow-back"
             size={22}
-            color="#111"
+            color={isDark ? "#ffffff" : "#111111"}
           />
         </TouchableOpacity>
 
@@ -152,7 +189,7 @@ export default function LoginScreen() {
               fontSize: 32,
               fontWeight: "700",
               marginBottom: 8,
-              color: "#111",
+              color: isDark ? "#ffffff" : "#111111",
             }}
           >
             Welcome back
@@ -161,17 +198,22 @@ export default function LoginScreen() {
           <Text
             style={{
               fontSize: 16,
-              color: "#666",
+              color: isDark ? "#94a3b8" : "#666666",
               marginBottom: 32,
             }}
           >
             Sign in to your business account
           </Text>
 
+          <OfflineBanner />
+
           {/* Email */}
+
           <TextInput
             placeholder="Email"
-            placeholderTextColor="#888"
+            placeholderTextColor={
+              isDark ? "#64748b" : "#888888"
+            }
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
@@ -179,50 +221,56 @@ export default function LoginScreen() {
             onChangeText={setEmail}
             style={{
               borderWidth: 1,
-              borderColor: "#ddd",
+              borderColor: isDark ? "#334155" : "#dddddd",
               borderRadius: 12,
               padding: 16,
               marginBottom: 16,
-              color: "#111",
-              backgroundColor: "#fff",
+              color: isDark ? "#ffffff" : "#111111",
+              backgroundColor: isDark ? "#0f172a" : "#ffffff",
             }}
           />
 
           {/* Password */}
+
           <TextInput
             placeholder="Password"
-            placeholderTextColor="#888"
+            placeholderTextColor={
+              isDark ? "#64748b" : "#888888"
+            }
             secureTextEntry
             value={password}
             onChangeText={setPassword}
             style={{
               borderWidth: 1,
-              borderColor: "#ddd",
+              borderColor: isDark ? "#334155" : "#dddddd",
               borderRadius: 12,
               padding: 16,
               marginBottom: 20,
-              color: "#111",
-              backgroundColor: "#fff",
+              color: isDark ? "#ffffff" : "#111111",
+              backgroundColor: isDark ? "#0f172a" : "#ffffff",
             }}
           />
 
           {/* Login button */}
+
           <TouchableOpacity
             onPress={handleLogin}
             disabled={loading}
             style={{
-              backgroundColor: "#111",
+              backgroundColor: isDark ? "#ffffff" : "#111111",
               padding: 16,
               borderRadius: 12,
               alignItems: "center",
             }}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator
+                color={isDark ? "#111111" : "#ffffff"}
+              />
             ) : (
               <Text
                 style={{
-                  color: "#fff",
+                  color: isDark ? "#111111" : "#ffffff",
                   fontSize: 16,
                   fontWeight: "600",
                 }}
@@ -233,6 +281,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Register */}
+
           <TouchableOpacity
             onPress={() => router.push("/register")}
             style={{
@@ -240,12 +289,16 @@ export default function LoginScreen() {
               alignItems: "center",
             }}
           >
-            <Text style={{ color: "#555" }}>
+            <Text
+              style={{
+                color: isDark ? "#94a3b8" : "#555555",
+              }}
+            >
               Don't have an account?{" "}
               <Text
                 style={{
                   fontWeight: "700",
-                  color: "#111",
+                  color: isDark ? "#ffffff" : "#111111",
                 }}
               >
                 Create one
@@ -253,6 +306,14 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        <AppAlert
+          visible={alertVisible}
+          title={alertTitle}
+          message={alertMessage}
+          type={alertType}
+          onClose={() => setAlertVisible(false)}
+        />
       </View>
     );
   }
@@ -260,14 +321,16 @@ export default function LoginScreen() {
   // -----------------------------------------
   // CAROUSEL
   // -----------------------------------------
+
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: "#fff",
+        backgroundColor: isDark ? "#020617" : "#ffffff",
       }}
     >
       {/* Logo / brand */}
+
       <View
         style={{
           alignItems: "center",
@@ -280,7 +343,7 @@ export default function LoginScreen() {
             width: 72,
             height: 72,
             borderRadius: 20,
-            backgroundColor: "#111",
+            backgroundColor: isDark ? "#ffffff" : "#111111",
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 18,
@@ -289,7 +352,7 @@ export default function LoginScreen() {
           <Ionicons
             name="business"
             size={38}
-            color="#fff"
+            color={isDark ? "#111111" : "#ffffff"}
           />
         </View>
 
@@ -297,7 +360,7 @@ export default function LoginScreen() {
           style={{
             fontSize: 28,
             fontWeight: "800",
-            color: "#111",
+            color: isDark ? "#ffffff" : "#111111",
           }}
         >
           Business Manager
@@ -306,7 +369,7 @@ export default function LoginScreen() {
         <Text
           style={{
             fontSize: 15,
-            color: "#777",
+            color: isDark ? "#94a3b8" : "#777777",
             marginTop: 6,
             textAlign: "center",
           }}
@@ -316,6 +379,7 @@ export default function LoginScreen() {
       </View>
 
       {/* Carousel */}
+
       <FlatList
         ref={flatListRef}
         data={slides}
@@ -334,32 +398,32 @@ export default function LoginScreen() {
               paddingHorizontal: 45,
             }}
           >
-        <View
-          style={{
-            width: 280,
-            height: 190,
-            borderRadius: 24,
-            overflow: "hidden",
-            marginBottom: 30,
-            backgroundColor: "#f3f4f6",
-          }}
-        >
-      <Image
-        source={item.image}
-        style={{
-          width: "100%",
-          height: "100%",
-        }}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-      />
-        </View>
+            <View
+              style={{
+                width: 280,
+                height: 190,
+                borderRadius: 24,
+                overflow: "hidden",
+                marginBottom: 30,
+                backgroundColor: isDark ? "#1e293b" : "#f3f4f6",
+              }}
+            >
+              <Image
+                source={item.image}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+              />
+            </View>
 
             <Text
               style={{
                 fontSize: 25,
                 fontWeight: "700",
-                color: "#111",
+                color: isDark ? "#ffffff" : "#111111",
                 textAlign: "center",
                 marginBottom: 12,
               }}
@@ -371,7 +435,7 @@ export default function LoginScreen() {
               style={{
                 fontSize: 16,
                 lineHeight: 24,
-                color: "#777",
+                color: isDark ? "#94a3b8" : "#777777",
                 textAlign: "center",
               }}
             >
@@ -382,6 +446,7 @@ export default function LoginScreen() {
       />
 
       {/* Dots */}
+
       <View
         style={{
           flexDirection: "row",
@@ -398,7 +463,13 @@ export default function LoginScreen() {
               height: 8,
               borderRadius: 4,
               backgroundColor:
-                index === currentSlide ? "#111" : "#d1d5db",
+                index === currentSlide
+                  ? isDark
+                    ? "#ffffff"
+                    : "#111111"
+                  : isDark
+                    ? "#475569"
+                    : "#d1d5db",
               marginHorizontal: 4,
             }}
           />
@@ -406,6 +477,7 @@ export default function LoginScreen() {
       </View>
 
       {/* Login button */}
+
       <View
         style={{
           paddingHorizontal: 24,
@@ -415,7 +487,7 @@ export default function LoginScreen() {
         <TouchableOpacity
           onPress={() => setShowLogin(true)}
           style={{
-            backgroundColor: "#111",
+            backgroundColor: isDark ? "#ffffff" : "#111111",
             padding: 17,
             borderRadius: 14,
             alignItems: "center",
@@ -423,7 +495,7 @@ export default function LoginScreen() {
         >
           <Text
             style={{
-              color: "#fff",
+              color: isDark ? "#111111" : "#ffffff",
               fontSize: 17,
               fontWeight: "700",
             }}
@@ -433,6 +505,7 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         {/* Register */}
+
         <TouchableOpacity
           onPress={() => router.push("/register")}
           style={{
@@ -440,18 +513,31 @@ export default function LoginScreen() {
             alignItems: "center",
           }}
         >
-          <Text style={{ color: "#666", fontSize: 15 }}>
+          <Text
+            style={{
+              color: isDark ? "#94a3b8" : "#666666",
+              fontSize: 15,
+            }}
+          >
             Don't have an account?{" "}
             <Text
               style={{
                 fontWeight: "700",
-                color: "#111",
+                color: isDark ? "#ffffff" : "#111111",
               }}
             >
               Create one
             </Text>
           </Text>
         </TouchableOpacity>
+
+        <AppAlert
+          visible={alertVisible}
+          title={alertTitle}
+          message={alertMessage}
+          type={alertType}
+          onClose={() => setAlertVisible(false)}
+        />
       </View>
     </View>
   );

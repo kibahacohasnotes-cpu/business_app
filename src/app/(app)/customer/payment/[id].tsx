@@ -1,10 +1,11 @@
+import AppAlert from "@/components/ui/AppAlert";
 import {
-  getCustomerById,
-  getCustomerAccount,
-  getCustomerPayments,
-  type Payment,
   type Customer,
   CustomerAccount,
+  getCustomerAccount,
+  getCustomerById,
+  getCustomerPayments,
+  type Payment,
 } from "@/lib/customers";
 import {
   createPayment,
@@ -14,6 +15,7 @@ import { getSales, Sale } from "@/lib/sales";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import NetInfo from "@react-native-community/netinfo";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -26,7 +28,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-
 const PAYMENT_METHODS: {
   label: string;
   value: PaymentMethod;
@@ -59,7 +60,10 @@ const PAYMENT_METHODS: {
   },
 ];
 
+
 export default function CustomerPaymentScreen() {
+
+  
   const router = useRouter();
 
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,6 +80,12 @@ export default function CustomerPaymentScreen() {
   const [sales, setSales] =  useState<Sale[]>([]);
   const [account, setAccount] =  useState<CustomerAccount | null>(null);
   const [payments, setPayments] =  useState<Payment[]>([]);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState<
+    "success" | "error" | "warning"
+  >("success");
 
   /* =====================================================
      LOAD CUSTOMER
@@ -104,10 +114,8 @@ export default function CustomerPaymentScreen() {
 
           setCustomer(customerData);
 
-          const customerSales =
-            salesData.filter(
-              (sale: { customer_id: string; }) =>
-                sale.customer_id === id
+          const customerSales = salesData.filter(
+              (sale) => sale.customer_id === id
             );
 
           setSales(customerSales);
@@ -157,7 +165,16 @@ export default function CustomerPaymentScreen() {
 
     setAmount(sanitized);
   }
-
+  function showAlert(
+    title: string,
+    message: string,
+    type: "success" | "error" | "warning" = "success"
+  ) {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertType(type);
+    setAlertVisible(true);
+  }
   /* =====================================================
      FORMAT MONEY
   ===================================================== */
@@ -174,10 +191,20 @@ export default function CustomerPaymentScreen() {
      COMPLETE PAYMENT
   ===================================================== */
 
-  async function handlePayment() {
-    const paymentAmount =
-      Number(amount);
 
+async function handlePayment() {
+  const network = await NetInfo.fetch();
+
+  if (!network.isConnected) {
+    showAlert(
+      "You're offline",
+      "You need an internet connection to record a payment.",
+      "warning"
+    );
+    return;
+  }
+
+  const paymentAmount = Number(amount);
     if (
       !Number.isFinite(paymentAmount) ||
       paymentAmount <= 0
@@ -718,7 +745,13 @@ export default function CustomerPaymentScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
-
+        <AppAlert
+          visible={alertVisible}
+          title={alertTitle}
+          message={alertMessage}
+          type={alertType}
+          onClose={() => setAlertVisible(false)}
+        />
     </View>
   );
 }

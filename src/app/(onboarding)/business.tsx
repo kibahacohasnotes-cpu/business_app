@@ -1,4 +1,5 @@
 import AppAlert from "@/components/ui/AppAlert";
+import { useTheme } from "@/context/ThemeContext";
 import { createBusiness } from "@/lib/business";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,6 +41,7 @@ const CURRENCIES = [
 
 export default function BusinessSetupScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
 
   const [step, setStep] = useState(1);
 
@@ -246,13 +248,13 @@ export default function BusinessSetupScreen() {
 
   if (loadingUser) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50">
+      <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
         <ActivityIndicator
           size="large"
-          color="#0f172a"
+          color={isDark ? "#ffffff" : "#0f172a"}
         />
 
-        <Text className="mt-4 text-sm text-slate-500">
+        <Text className="mt-4 text-sm text-slate-500 dark:text-slate-400">
           Loading your information...
         </Text>
       </View>
@@ -265,7 +267,7 @@ export default function BusinessSetupScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-slate-50"
+      className="flex-1 bg-slate-50 dark:bg-slate-950"
       behavior={
         Platform.OS === "ios"
           ? "padding"
@@ -285,11 +287,11 @@ export default function BusinessSetupScreen() {
           {/* HEADER */}
 
           <View className="mb-8">
-            <Text className="text-sm font-semibold text-slate-400">
+            <Text className="text-sm font-semibold text-slate-400 dark:text-slate-500">
               STEP {step} OF 3
             </Text>
 
-            <Text className="mt-2 text-3xl font-bold text-slate-950">
+            <Text className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
               {step === 1 &&
                 "Tell us about your business"}
 
@@ -300,7 +302,7 @@ export default function BusinessSetupScreen() {
                 "A few final details"}
             </Text>
 
-            <Text className="mt-2 text-base leading-6 text-slate-500">
+            <Text className="mt-2 text-base leading-6 text-slate-500 dark:text-slate-400">
               {step === 1 &&
                 "Create the identity of your business."}
 
@@ -320,8 +322,8 @@ export default function BusinessSetupScreen() {
                 key={item}
                 className={`h-1.5 flex-1 rounded-full ${
                   item <= step
-                    ? "bg-slate-950"
-                    : "bg-slate-200"
+                    ? "bg-slate-950 dark:bg-white"
+                    : "bg-slate-200 dark:bg-slate-800"
                 }`}
               />
             ))}
@@ -338,11 +340,13 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="e.g. ARTICLES INC"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={businessName}
                 onChangeText={setBusinessName}
                 autoCapitalize="words"
-                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
 
               <FieldLabel
@@ -363,15 +367,15 @@ export default function BusinessSetupScreen() {
                       }
                       className={`rounded-full border px-4 py-3 ${
                         selected
-                          ? "border-slate-950 bg-slate-950"
-                          : "border-slate-200 bg-white"
+                          ? "border-slate-950 bg-slate-950 dark:border-white dark:bg-white"
+                          : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
                       }`}
                     >
                       <Text
                         className={`text-sm font-medium ${
                           selected
-                            ? "text-white"
-                            : "text-slate-700"
+                            ? "text-white dark:text-slate-950"
+                            : "text-slate-700 dark:text-slate-300"
                         }`}
                       >
                         {type}
@@ -388,13 +392,15 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="What does your business do?"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={description}
                 onChangeText={setDescription}
                 multiline
                 numberOfLines={5}
                 textAlignVertical="top"
-                className="mb-6 min-h-[130px] rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-6 min-h-[130px] rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
             </View>
           )}
@@ -410,11 +416,13 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="+255 7XX XXX XXX"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
-                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
 
               <FieldLabel
@@ -424,12 +432,14 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="business@example.com"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
 
               <FieldLabel
@@ -439,10 +449,12 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="Street, building or area"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={address}
                 onChangeText={setAddress}
-                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
 
               <FieldLabel
@@ -452,10 +464,12 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="e.g. Dar es Salaam"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={city}
                 onChangeText={setCity}
-                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
 
               <FieldLabel
@@ -465,10 +479,12 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="e.g. Tanzania"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={country}
                 onChangeText={setCountry}
-                className="mb-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
             </View>
           )}
@@ -495,22 +511,22 @@ export default function BusinessSetupScreen() {
                       }
                       className={`mb-2 flex-row items-center rounded-2xl border p-4 ${
                         selected
-                          ? "border-slate-950 bg-slate-950"
-                          : "border-slate-200 bg-white"
+                          ? "border-slate-950 bg-slate-950 dark:border-white dark:bg-white"
+                          : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
                       }`}
                     >
                       <View
                         className={`h-10 w-10 items-center justify-center rounded-xl ${
                           selected
-                            ? "bg-white/10"
-                            : "bg-slate-100"
+                            ? "bg-white/10 dark:bg-slate-950/10"
+                            : "bg-slate-100 dark:bg-slate-800"
                         }`}
                       >
                         <Text
                           className={`text-xs font-bold ${
                             selected
-                              ? "text-white"
-                              : "text-slate-700"
+                              ? "text-white dark:text-slate-950"
+                              : "text-slate-700 dark:text-slate-300"
                           }`}
                         >
                           {item.code}
@@ -521,8 +537,8 @@ export default function BusinessSetupScreen() {
                         <Text
                           className={`font-semibold ${
                             selected
-                              ? "text-white"
-                              : "text-slate-900"
+                              ? "text-white dark:text-slate-950"
+                              : "text-slate-900 dark:text-white"
                           }`}
                         >
                           {item.name}
@@ -531,8 +547,8 @@ export default function BusinessSetupScreen() {
                         <Text
                           className={`mt-0.5 text-xs ${
                             selected
-                              ? "text-slate-300"
-                              : "text-slate-400"
+                              ? "text-slate-300 dark:text-slate-600"
+                              : "text-slate-400 dark:text-slate-500"
                           }`}
                         >
                           {item.code}
@@ -543,7 +559,7 @@ export default function BusinessSetupScreen() {
                         <Ionicons
                           name="checkmark-circle"
                           size={23}
-                          color="white"
+                          color={isDark ? "#0f172a" : "white"}
                         />
                       )}
                     </Pressable>
@@ -558,11 +574,13 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="Business registration number"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={registrationNumber}
                 onChangeText={setRegistrationNumber}
                 autoCapitalize="characters"
-                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
 
               <FieldLabel
@@ -572,15 +590,17 @@ export default function BusinessSetupScreen() {
 
               <TextInput
                 placeholder="https://example.com"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={
+                  isDark ? "#64748b" : "#94a3b8"
+                }
                 value={website}
                 onChangeText={setWebsite}
                 autoCapitalize="none"
                 keyboardType="url"
-                className="mb-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950"
+                className="mb-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
               />
 
-              <Text className="mb-2 text-xs leading-5 text-slate-400">
+              <Text className="mb-2 text-xs leading-5 text-slate-400 dark:text-slate-500">
                 You can add your website, Instagram,
                 Facebook, or another business link.
               </Text>
@@ -594,12 +614,12 @@ export default function BusinessSetupScreen() {
               <Pressable
                 onPress={previousStep}
                 disabled={loading}
-                className="h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white"
+                className="h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
               >
                 <Ionicons
                   name="arrow-back"
                   size={21}
-                  color="#0f172a"
+                  color={isDark ? "#ffffff" : "#0f172a"}
                 />
               </Pressable>
             )}
@@ -611,13 +631,15 @@ export default function BusinessSetupScreen() {
                   : handleCreateBusiness
               }
               disabled={loading}
-              className="h-14 flex-1 flex-row items-center justify-center rounded-2xl bg-slate-950"
+              className="h-14 flex-1 flex-row items-center justify-center rounded-2xl bg-slate-950 dark:bg-white"
             >
               {loading ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator
+                  color={isDark ? "#0f172a" : "white"}
+                />
               ) : (
                 <>
-                  <Text className="text-base font-bold text-white">
+                  <Text className="text-base font-bold text-white dark:text-slate-950">
                     {step < 3
                       ? "Continue"
                       : "Create Business"}
@@ -630,7 +652,7 @@ export default function BusinessSetupScreen() {
                         : "checkmark"
                     }
                     size={20}
-                    color="white"
+                    color={isDark ? "#0f172a" : "white"}
                     style={{
                       marginLeft: 8,
                     }}
@@ -642,7 +664,7 @@ export default function BusinessSetupScreen() {
 
           {/* FOOTER */}
 
-          <Text className="mt-6 text-center text-xs leading-5 text-slate-400">
+          <Text className="mt-6 text-center text-xs leading-5 text-slate-400 dark:text-slate-500">
             You can change these details later
             from your business profile.
           </Text>
@@ -679,7 +701,7 @@ function FieldLabel({
 }) {
   return (
     <View className="mb-2 flex-row items-center">
-      <Text className="text-sm font-semibold text-slate-700">
+      <Text className="text-sm font-semibold text-slate-700 dark:text-slate-300">
         {label}
       </Text>
 
@@ -690,7 +712,7 @@ function FieldLabel({
       )}
 
       {optional && (
-        <Text className="ml-2 text-xs text-slate-400">
+        <Text className="ml-2 text-xs text-slate-400 dark:text-slate-500">
           Optional
         </Text>
       )}

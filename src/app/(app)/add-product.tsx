@@ -1,13 +1,11 @@
-
-import {
-  createProduct,
-  uploadProductImages,
-} from "@/lib/products";
+import AppAlert from "@/components/ui/AppAlert";
+import { createProduct, uploadProductImages } from "@/lib/products";
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import NetInfo from "@react-native-community/netinfo";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import {
   ActivityIndicator,
   Animated,
@@ -19,9 +17,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from "react-native";
-import AppAlert from "@/components/ui/AppAlert";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
   Dimensions.get("window");
@@ -33,10 +31,10 @@ const AnimatedFlatList =
   Animated.createAnimatedComponent(FlatList<string>);
 
 export default function AddProductScreen() {
-
-
-
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
   const scrollY = useRef(new Animated.Value(0)).current;
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -140,165 +138,136 @@ export default function AddProductScreen() {
     router.back();
   }
 
-async function handleCreateProduct() {
+  async function handleCreateProduct() {
+    const network = await NetInfo.fetch();
 
-  if (sku.trim()) {
-  const { data: existingProduct, error: skuCheckError } =
-    await supabase
-      .from("products")
-      .select("id")
-      .eq("sku", sku.trim())
-      .maybeSingle();
-
-  if (skuCheckError) {
-    throw skuCheckError;
-  }
-
-  if (existingProduct) {
-    showAlert(
-      "SKU already exists",
-      `The SKU "${sku.trim()}" is already being used by another product. Please enter a different SKU.`,
-      "warning"
-    );
-    return;
-  }
-}
-
-  if (!name.trim()) {
-    showAlert(
-      "Product name required",
-      "Enter the product name.",
-      "warning"
-    );
-    return;
-  }
-
-  const cost = Number(costPrice);
-  const sale = Number(salePrice);
-  const stock = Number(stockQty);
-  const threshold = Number(lowStockThreshold);
-
-  if (Number.isNaN(cost) || cost < 0) {
-    showAlert(
-      "Invalid cost price",
-      "Enter a valid cost price.",
-      "warning"
-    );
-    return;
-  }
-
-  if (Number.isNaN(sale) || sale < 0) {
-    showAlert(
-      "Invalid selling price",
-      "Enter a valid selling price.",
-      "warning"
-    );
-    return;
-  }
-
-  if (Number.isNaN(stock) || stock < 0) {
-    showAlert(
-      "Invalid stock",
-      "Enter a valid stock quantity.",
-      "warning"
-    );
-    return;
-  }
-
-  if (Number.isNaN(threshold) || threshold < 0) {
-    showAlert(
-      "Invalid threshold",
-      "Enter a valid low-stock threshold.",
-      "warning"
-    );
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    // ==========================================
-    // 1. CREATE PRODUCT
-    // ==========================================
-
-    const productId = await createProduct({
-      name: name.trim(),
-      sku: sku.trim() || null,
-      category_id: null,
-      unit: unit.trim() || "pcs",
-      cost_price: cost,
-      sale_price: sale,
-      stock_qty: stock,
-      low_stock_threshold: threshold,
-      image_url: null,
-      description: null,
-      is_active: true,
-      category: ""
-    });
-
-    console.log("PRODUCT CREATED:", productId);
-
-    if (!productId) {
-      throw new Error(
-        "Product was created but no product ID was returned."
+    if (!network.isConnected) {
+      showAlert(
+        "You're offline",
+        "You need an internet connection to create and save a product.",
+        "warning"
       );
+      return;
     }
 
-    // ==========================================
-    // 2. UPLOAD PRODUCT IMAGES
-    // ==========================================
+    if (sku.trim()) {
+      const { data: existingProduct, error: skuCheckError } =
+        await supabase
+          .from("products")
+          .select("id")
+          .eq("sku", sku.trim())
+          .maybeSingle();
 
-    if (imageUris.length > 0) {
-      console.log(
-        "UPLOADING PRODUCT IMAGES:",
-        imageUris.length
-      );
+      if (skuCheckError) {
+        throw skuCheckError;
+      }
 
-      const uploadedImages =
-        await uploadProductImages(
-          productId,
-          imageUris
+      if (existingProduct) {
+        showAlert(
+          "SKU already exists",
+          `The SKU "${sku.trim()}" is already being used by another product. Please enter a different SKU.`,
+          "warning"
         );
-
-      console.log(
-        "IMAGES UPLOADED:",
-        uploadedImages
-      );
-
-      // ==========================================
-      // 3. SAVE IMAGES TO product_images
-      // ==========================================
-
-      console.log(
-        "PRODUCT IMAGES SAVED SUCCESSFULLY"
-      );
+        return;
+      }
     }
 
-    // ==========================================
-    // 4. SUCCESS
-    // ==========================================
+    if (!name.trim()) {
+      showAlert(
+        "Product name required",
+        "Enter the product name.",
+        "warning"
+      );
+      return;
+    }
 
-    showAlert(
-      "Product created",
-      `${name.trim()} has been added successfully.`,
-      "success"
-    );
-  } catch (error: any) {
-    console.error(
-      "CREATE PRODUCT ERROR:",
-      error
-    );
+    const cost = Number(costPrice);
+    const sale = Number(salePrice);
+    const stock = Number(stockQty);
+    const threshold = Number(lowStockThreshold);
 
-    showAlert(
-      "Unable to create product",
-      error?.message ||
-        "Something went wrong while creating the product.",
-      "error"
-    );
-  } finally {
-    setLoading(false);
+    if (Number.isNaN(cost) || cost < 0) {
+      showAlert(
+        "Invalid cost price",
+        "Enter a valid cost price.",
+        "warning"
+      );
+      return;
+    }
+
+    if (Number.isNaN(sale) || sale < 0) {
+      showAlert(
+        "Invalid selling price",
+        "Enter a valid selling price.",
+        "warning"
+      );
+      return;
+    }
+
+    if (Number.isNaN(stock) || stock < 0) {
+      showAlert(
+        "Invalid stock",
+        "Enter a valid stock quantity.",
+        "warning"
+      );
+      return;
+    }
+
+    if (Number.isNaN(threshold) || threshold < 0) {
+      showAlert(
+        "Invalid threshold",
+        "Enter a valid low-stock threshold.",
+        "warning"
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const productId = await createProduct({
+        name: name.trim(),
+        sku: sku.trim() || null,
+        category_id: null,
+        unit: unit.trim() || "pcs",
+        cost_price: cost,
+        sale_price: sale,
+        stock_qty: stock,
+        low_stock_threshold: threshold,
+        image_url: null,
+        description: null,
+        is_active: true,
+        category: "",
+      });
+
+      if (!productId) {
+        throw new Error(
+          "Product was created but no product ID was returned."
+        );
+      }
+
+      if (imageUris.length > 0) {
+        await uploadProductImages(productId, imageUris);
+      }
+
+      showAlert(
+        "Product created",
+        `${name.trim()} has been added successfully.`,
+        "success"
+      );
+    } catch (error: any) {
+      console.error("CREATE PRODUCT ERROR:", error);
+
+      showAlert(
+        "Unable to create product",
+        error?.message ||
+          "Something went wrong while creating the product.",
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   /*
    * COLLAPSING HEADER
@@ -345,15 +314,10 @@ async function handleCreateProduct() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-slate-50"
-      behavior={
-        Platform.OS === "ios"
-          ? "padding"
-          : undefined
-      }
+      className="flex-1 bg-slate-50 dark:bg-slate-950"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View className="flex-1">
-
         {/* ================================================= */}
         {/* COLLAPSING STICKY IMAGE HEADER */}
         {/* ================================================= */}
@@ -374,11 +338,7 @@ async function handleCreateProduct() {
             <Animated.View
               style={{
                 flex: 1,
-                transform: [
-                  {
-                    scale: imageScale,
-                  },
-                ],
+                transform: [{ scale: imageScale }],
               }}
             >
               <FlatList
@@ -386,22 +346,15 @@ async function handleCreateProduct() {
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
-                keyExtractor={(uri, index) =>
-                  `${uri}-${index}`
-                }
+                keyExtractor={(uri, index) => `${uri}-${index}`}
                 scrollEventThrottle={16}
                 onMomentumScrollEnd={(event) => {
                   const index = Math.round(
-                    event.nativeEvent.contentOffset.x /
-                      SCREEN_WIDTH
+                    event.nativeEvent.contentOffset.x / SCREEN_WIDTH
                   );
-
                   setActiveImageIndex(index);
                 }}
-                renderItem={({
-                  item,
-                  index,
-                }) => (
+                renderItem={({ item, index }) => (
                   <View
                     style={{
                       width: SCREEN_WIDTH,
@@ -418,20 +371,16 @@ async function handleCreateProduct() {
                     />
 
                     {/* REMOVE IMAGE */}
-
                     <Animated.View
                       style={{
-                        opacity:
-                          expandedControlsOpacity,
+                        opacity: expandedControlsOpacity,
                         position: "absolute",
                         right: 20,
                         top: 55,
                       }}
                     >
                       <TouchableOpacity
-                        onPress={() =>
-                          removeProductImage(index)
-                        }
+                        onPress={() => removeProductImage(index)}
                         activeOpacity={0.8}
                         className="h-11 w-11 items-center justify-center rounded-full bg-black/60"
                       >
@@ -450,28 +399,27 @@ async function handleCreateProduct() {
             <TouchableOpacity
               onPress={pickProductImages}
               activeOpacity={0.9}
-              className="flex-1 items-center justify-center bg-slate-100"
+              className="flex-1 items-center justify-center bg-slate-100 dark:bg-slate-900"
             >
-              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-white">
+              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-white dark:bg-slate-800">
                 <Ionicons
                   name="images-outline"
                   size={30}
-                  color="#0f172a"
+                  color={isDark ? "#f8fafc" : "#0f172a"}
                 />
               </View>
 
-              <Text className="mt-4 text-base font-bold text-slate-900">
+              <Text className="mt-4 text-base font-bold text-slate-900 dark:text-white">
                 Add product images
               </Text>
 
-              <Text className="mt-1 text-center text-sm text-slate-400">
+              <Text className="mt-1 text-center text-sm text-slate-400 dark:text-slate-500">
                 Select one or more photos
               </Text>
             </TouchableOpacity>
           )}
 
           {/* DARK OVERLAY */}
-
           <Animated.View
             pointerEvents="none"
             style={{
@@ -483,21 +431,19 @@ async function handleCreateProduct() {
           />
 
           {/* BACK BUTTON */}
-
           <TouchableOpacity
             onPress={() => router.back()}
             activeOpacity={0.85}
-            className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90"
+            className="absolute left-5 top-14 h-11 w-11 items-center justify-center rounded-2xl bg-white/90 dark:bg-slate-900/90"
           >
             <Ionicons
               name="arrow-back"
               size={22}
-              color="#0f172a"
+              color={isDark ? "#ffffff" : "#0f172a"}
             />
           </TouchableOpacity>
 
           {/* COLLAPSED TITLE */}
-
           <Animated.View
             pointerEvents="none"
             style={{
@@ -517,7 +463,6 @@ async function handleCreateProduct() {
           </Animated.View>
 
           {/* IMAGE COUNTER */}
-
           {imageUris.length > 0 && (
             <Animated.View
               style={{
@@ -530,15 +475,13 @@ async function handleCreateProduct() {
             >
               <View className="rounded-full bg-black/60 px-3 py-2">
                 <Text className="text-xs font-bold text-white">
-                  {activeImageIndex + 1} /{" "}
-                  {imageUris.length}
+                  {activeImageIndex + 1} / {imageUris.length}
                 </Text>
               </View>
             </Animated.View>
           )}
 
           {/* PAGINATION */}
-
           {imageUris.length > 1 && (
             <Animated.View
               style={{
@@ -565,8 +508,7 @@ async function handleCreateProduct() {
             </Animated.View>
           )}
 
-          {/* ADD IMAGES */}
-
+          {/* ADD IMAGES BUTTON */}
           <Animated.View
             style={{
               position: "absolute",
@@ -579,15 +521,15 @@ async function handleCreateProduct() {
               <TouchableOpacity
                 onPress={pickProductImages}
                 activeOpacity={0.85}
-                className="flex-row items-center rounded-full bg-white/90 px-4 py-3"
+                className="flex-row items-center rounded-full bg-white/90 px-4 py-3 dark:bg-slate-900/90"
               >
                 <Ionicons
                   name="add"
                   size={19}
-                  color="#0f172a"
+                  color={isDark ? "#ffffff" : "#0f172a"}
                 />
 
-                <Text className="ml-2 text-xs font-bold text-slate-900">
+                <Text className="ml-2 text-xs font-bold text-slate-900 dark:text-white">
                   Add images
                 </Text>
               </TouchableOpacity>
@@ -600,7 +542,7 @@ async function handleCreateProduct() {
         {/* ================================================= */}
 
         <AnimatedFlatList
-          data={[0]}
+          data={["0"]}
           keyExtractor={() => "content"}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -625,34 +567,31 @@ async function handleCreateProduct() {
           )}
           renderItem={() => (
             <View>
-
               {/* HEADER */}
-
               <View className="mb-8 flex-row items-center pt-6">
                 <View>
-                  <Text className="text-2xl font-bold text-slate-950">
+                  <Text className="text-2xl font-bold text-slate-950 dark:text-white">
                     Add Product
                   </Text>
 
-                  <Text className="mt-1 text-sm text-slate-400">
+                  <Text className="mt-1 text-sm text-slate-400 dark:text-slate-500">
                     Add a product to your inventory
                   </Text>
                 </View>
               </View>
 
               {/* BASIC INFORMATION */}
-
-              <View className="mb-5 rounded-3xl bg-white p-5">
+              <View className="mb-5 rounded-3xl bg-white p-5 dark:bg-slate-900 dark:border dark:border-slate-800">
                 <View className="mb-5 flex-row items-center">
-                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
                     <Ionicons
                       name="cube-outline"
                       size={21}
-                      color="#0f172a"
+                      color={isDark ? "#f8fafc" : "#0f172a"}
                     />
                   </View>
 
-                  <Text className="text-lg font-bold text-slate-900">
+                  <Text className="text-lg font-bold text-slate-900 dark:text-white">
                     Product information
                   </Text>
                 </View>
@@ -665,7 +604,7 @@ async function handleCreateProduct() {
                 />
 
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-semibold text-slate-700">
+                  <Text className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
                     SKU (Stock Keeping Unit)
                   </Text>
 
@@ -676,15 +615,13 @@ async function handleCreateProduct() {
                       placeholder="e.g. CC-500"
                       placeholderTextColor="#94a3b8"
                       autoCapitalize="characters"
-                      className="flex-1 rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900"
+                      className="flex-1 rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900 dark:bg-slate-800/60 dark:text-white"
                     />
 
                     <TouchableOpacity
-                      onPress={() =>
-                        router.push("/scanner")
-                      }
+                      onPress={() => router.push("/scanner")}
                       activeOpacity={0.8}
-                      className="h-[54px] w-[54px] items-center justify-center rounded-2xl bg-slate-950"
+                      className="h-[54px] w-[54px] items-center justify-center rounded-2xl bg-slate-950 dark:bg-slate-800"
                     >
                       <Ionicons
                         name="qr-code-outline"
@@ -695,9 +632,7 @@ async function handleCreateProduct() {
                   </View>
 
                   <TouchableOpacity
-                    onPress={() =>
-                      router.push("/scanner")
-                    }
+                    onPress={() => router.push("/scanner")}
                     activeOpacity={0.7}
                     className="mt-2 flex-row items-center"
                   >
@@ -707,7 +642,7 @@ async function handleCreateProduct() {
                       color="#64748b"
                     />
 
-                    <Text className="ml-1 text-xs font-medium text-slate-500">
+                    <Text className="ml-1 text-xs font-medium text-slate-500 dark:text-slate-400">
                       Scan QR code or barcode
                     </Text>
                   </TouchableOpacity>
@@ -729,18 +664,17 @@ async function handleCreateProduct() {
               </View>
 
               {/* PRICING */}
-
-              <View className="mb-5 rounded-3xl bg-white p-5">
+              <View className="mb-5 rounded-3xl bg-white p-5 dark:bg-slate-900 dark:border dark:border-slate-800">
                 <View className="mb-5 flex-row items-center">
-                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
                     <Ionicons
                       name="cash-outline"
                       size={21}
-                      color="#0f172a"
+                      color={isDark ? "#f8fafc" : "#0f172a"}
                     />
                   </View>
 
-                  <Text className="text-lg font-bold text-slate-900">
+                  <Text className="text-lg font-bold text-slate-900 dark:text-white">
                     Pricing
                   </Text>
                 </View>
@@ -763,18 +697,17 @@ async function handleCreateProduct() {
               </View>
 
               {/* INVENTORY */}
-
-              <View className="mb-5 rounded-3xl bg-white p-5">
+              <View className="mb-5 rounded-3xl bg-white p-5 dark:bg-slate-900 dark:border dark:border-slate-800">
                 <View className="mb-5 flex-row items-center">
-                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                  <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
                     <Ionicons
                       name="layers-outline"
                       size={21}
-                      color="#0f172a"
+                      color={isDark ? "#f8fafc" : "#0f172a"}
                     />
                   </View>
 
-                  <Text className="text-lg font-bold text-slate-900">
+                  <Text className="text-lg font-bold text-slate-900 dark:text-white">
                     Inventory
                   </Text>
                 </View>
@@ -796,29 +729,30 @@ async function handleCreateProduct() {
                 />
               </View>
 
-              {/* CREATE */}
-
+              {/* CREATE BUTTON */}
               <TouchableOpacity
                 activeOpacity={0.85}
                 disabled={loading}
                 onPress={handleCreateProduct}
                 className={`items-center rounded-2xl py-4 ${
                   loading
-                    ? "bg-slate-400"
-                    : "bg-slate-950"
+                    ? "bg-slate-400 dark:bg-slate-700"
+                    : "bg-slate-950 dark:bg-white"
                 }`}
               >
                 {loading ? (
-                  <ActivityIndicator color="#ffffff" />
+                  <ActivityIndicator
+                    color={isDark ? "#0f172a" : "#ffffff"}
+                  />
                 ) : (
                   <View className="flex-row items-center">
                     <Ionicons
                       name="checkmark-circle-outline"
                       size={21}
-                      color="#ffffff"
+                      color={isDark ? "#0f172a" : "#ffffff"}
                     />
 
-                    <Text className="ml-2 text-base font-bold text-white">
+                    <Text className="ml-2 text-base font-bold text-white dark:text-slate-950">
                       Create Product
                     </Text>
                   </View>
@@ -829,7 +763,6 @@ async function handleCreateProduct() {
         />
 
         {/* ALERT */}
-
         <AppAlert
           visible={alertVisible}
           title={alertTitle}
@@ -864,7 +797,7 @@ function Field({
 }) {
   return (
     <View className="mb-4">
-      <Text className="mb-2 text-sm font-semibold text-slate-700">
+      <Text className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
         {label}
       </Text>
 
@@ -875,9 +808,8 @@ function Field({
         placeholderTextColor="#94a3b8"
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
-        className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900"
+        className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900 dark:bg-slate-800/60 dark:text-white"
       />
     </View>
   );
 }
-

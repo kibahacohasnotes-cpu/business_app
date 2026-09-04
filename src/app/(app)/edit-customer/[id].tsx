@@ -13,6 +13,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import NetInfo from "@react-native-community/netinfo";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -174,6 +175,16 @@ export default function EditCustomerScreen() {
   ===================================================== */
 
   async function handleSave() {
+        const network = await NetInfo.fetch();
+
+    if (!network.isConnected) {
+      showAlert(
+        "You're offline",
+        "You need an internet connection to save customer changes.",
+        "warning"
+      );
+      return;
+    }
     const cleanName = name.trim();
     const cleanPhone = phone.trim();
     const cleanEmail =

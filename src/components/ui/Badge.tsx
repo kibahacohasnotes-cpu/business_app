@@ -1,5 +1,5 @@
 import { Text, View } from "react-native";
-
+import React from "react";
 type BadgeProps = {
   text: string;
   variant?: "success" | "warning" | "danger" | "neutral";

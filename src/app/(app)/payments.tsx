@@ -22,6 +22,8 @@ import {
   View,
 } from "react-native";
 
+import { useTheme } from "@/context/ThemeContext";
+
 type Filter =
   | "all"
   | "cash"
@@ -37,6 +39,7 @@ type Sort =
 
 export default function PaymentsScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
 
   const [payments, setPayments] =
     useState<Payment[]>([]);
@@ -55,6 +58,9 @@ export default function PaymentsScreen() {
 
   const [refreshing, setRefreshing] =
     useState(false);
+
+  const iconColor = isDark ? "#ffffff" : "#0f172a";
+  const secondaryIconColor = isDark ? "#94a3b8" : "#64748b";
 
   /* =====================================================
      LOAD PAYMENTS
@@ -236,14 +242,13 @@ export default function PaymentsScreen() {
             },
           })
         }
-  className="mb-3 rounded-3xl bg-white p-5 active:opacity-70"
->
+        className="mb-3 rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
+      >
         <View className="flex-row items-center">
 
           {/* ICON */}
 
-          <View className="h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-
+          <View className="h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
             <Ionicons
               name={
                 item.payment_method ===
@@ -261,22 +266,21 @@ export default function PaymentsScreen() {
                   : "wallet-outline"
               }
               size={22}
-              color="#0f172a"
+              color={iconColor}
             />
-
           </View>
 
           {/* INFO */}
 
           <View className="ml-4 flex-1">
 
-            <Text className="text-base font-bold text-slate-900">
+            <Text className="text-base font-bold text-slate-900 dark:text-white">
               {formatPaymentMethod(
                 item.payment_method
               )}
             </Text>
 
-            <Text className="mt-1 text-xs text-slate-400">
+            <Text className="mt-1 text-xs text-slate-400 dark:text-slate-500">
               {formatDate(
                 item.payment_date
               )}
@@ -284,7 +288,7 @@ export default function PaymentsScreen() {
 
             {item.reference && (
               <Text
-                className="mt-1 text-xs text-slate-500"
+                className="mt-1 text-xs text-slate-500 dark:text-slate-400"
                 numberOfLines={1}
               >
                 Ref: {item.reference}
@@ -297,7 +301,7 @@ export default function PaymentsScreen() {
 
           <View className="items-end">
 
-            <Text className="text-base font-bold text-slate-950">
+            <Text className="text-base font-bold text-slate-950 dark:text-white">
               TZS{" "}
               {formatMoney(
                 Number(item.amount)
@@ -305,7 +309,7 @@ export default function PaymentsScreen() {
             </Text>
 
             {item.sale_id && (
-              <Text className="mt-1 text-xs text-slate-400">
+              <Text className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                 Sale #
                 {item.sale_id.slice(
                   0,
@@ -317,7 +321,6 @@ export default function PaymentsScreen() {
           </View>
 
         </View>
-
       </Pressable>
     );
   }
@@ -327,13 +330,13 @@ export default function PaymentsScreen() {
   ===================================================== */
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
 
       {/* =================================================
           STATIC HEADER
       ================================================= */}
 
-      <View className="bg-slate-50 px-5 pb-4 pt-14">
+      <View className="bg-slate-50 px-5 pb-4 pt-14 dark:bg-slate-950">
 
         <View className="flex-row items-center">
 
@@ -341,22 +344,22 @@ export default function PaymentsScreen() {
             onPress={() =>
               router.back()
             }
-            className="mr-4 h-11 w-11 items-center justify-center rounded-2xl bg-white active:opacity-70"
+            className="mr-4 h-11 w-11 items-center justify-center rounded-2xl bg-white active:opacity-70 dark:bg-slate-900"
           >
             <Ionicons
               name="arrow-back"
               size={22}
-              color="#0f172a"
+              color={iconColor}
             />
           </Pressable>
 
           <View className="flex-1">
 
-            <Text className="text-3xl font-bold text-slate-950">
+            <Text className="text-3xl font-bold text-slate-950 dark:text-white">
               Payments
             </Text>
 
-            <Text className="mt-1 text-sm text-slate-400">
+            <Text className="mt-1 text-sm text-slate-400 dark:text-slate-500">
               Track money received
             </Text>
 
@@ -366,7 +369,7 @@ export default function PaymentsScreen() {
 
         {/* SEARCH */}
 
-        <View className="mt-5 flex-row items-center rounded-2xl bg-white px-4 py-3">
+        <View className="mt-5 flex-row items-center rounded-2xl bg-white px-4 py-3 dark:bg-slate-900">
 
           <Ionicons
             name="search-outline"
@@ -380,7 +383,7 @@ export default function PaymentsScreen() {
             placeholder="Search payments..."
             placeholderTextColor="#94a3b8"
             autoCapitalize="none"
-            className="ml-3 flex-1 text-base text-slate-900"
+            className="ml-3 flex-1 text-base text-slate-900 dark:text-white"
           />
 
           {search.length > 0 && (
@@ -425,6 +428,11 @@ export default function PaymentsScreen() {
               setRefreshing(true);
               loadPayments();
             }}
+            tintColor={
+              isDark
+                ? "#ffffff"
+                : "#0f172a"
+            }
           />
         }
         ListHeaderComponent={
@@ -434,7 +442,7 @@ export default function PaymentsScreen() {
 
             <View className="mb-5 flex-row gap-3">
 
-              <View className="flex-1 rounded-3xl bg-slate-950 p-5">
+              <View className="flex-1 rounded-3xl bg-slate-950 p-5 dark:bg-slate-900">
 
                 <Text className="text-xs font-medium text-slate-400">
                   TOTAL RECEIVED
@@ -449,13 +457,13 @@ export default function PaymentsScreen() {
 
               </View>
 
-              <View className="flex-1 rounded-3xl bg-white p-5">
+              <View className="flex-1 rounded-3xl bg-white p-5 dark:bg-slate-900">
 
                 <Text className="text-xs font-medium text-slate-400">
                   TODAY
                 </Text>
 
-                <Text className="mt-2 text-xl font-bold text-slate-950">
+                <Text className="mt-2 text-xl font-bold text-slate-950 dark:text-white">
                   TZS{" "}
                   {formatMoney(
                     todayTotal
@@ -470,11 +478,11 @@ export default function PaymentsScreen() {
 
             <View className="mb-3 flex-row items-center justify-between">
 
-              <Text className="text-lg font-bold text-slate-900">
+              <Text className="text-lg font-bold text-slate-900 dark:text-white">
                 Payment history
               </Text>
 
-              <View className="flex-row rounded-xl bg-white p-1">
+              <View className="flex-row rounded-xl bg-white p-1 dark:bg-slate-900">
 
                 <Pressable
                   onPress={() =>
@@ -482,15 +490,15 @@ export default function PaymentsScreen() {
                   }
                   className={`rounded-lg px-3 py-2 ${
                     sort === "date"
-                      ? "bg-slate-950"
+                      ? "bg-slate-950 dark:bg-white"
                       : ""
                   }`}
                 >
                   <Text
                     className={`text-xs font-bold ${
                       sort === "date"
-                        ? "text-white"
-                        : "text-slate-500"
+                        ? "text-white dark:text-slate-950"
+                        : "text-slate-500 dark:text-slate-400"
                     }`}
                   >
                     Date
@@ -503,15 +511,15 @@ export default function PaymentsScreen() {
                   }
                   className={`rounded-lg px-3 py-2 ${
                     sort === "amount"
-                      ? "bg-slate-950"
+                      ? "bg-slate-950 dark:bg-white"
                       : ""
                   }`}
                 >
                   <Text
                     className={`text-xs font-bold ${
                       sort === "amount"
-                        ? "text-white"
-                        : "text-slate-500"
+                        ? "text-white dark:text-slate-950"
+                        : "text-slate-500 dark:text-slate-400"
                     }`}
                   >
                     Amount
@@ -553,15 +561,15 @@ export default function PaymentsScreen() {
                   }
                   className={`mr-2 rounded-full px-4 py-2.5 ${
                     filter === item
-                      ? "bg-slate-950"
-                      : "bg-white"
+                      ? "bg-slate-950 dark:bg-white"
+                      : "bg-white dark:bg-slate-900"
                   }`}
                 >
                   <Text
                     className={`text-xs font-bold ${
                       filter === item
-                        ? "text-white"
-                        : "text-slate-500"
+                        ? "text-white dark:text-slate-950"
+                        : "text-slate-500 dark:text-slate-400"
                     }`}
                   >
                     {item ===
@@ -587,32 +595,36 @@ export default function PaymentsScreen() {
 
               <ActivityIndicator
                 size="large"
-                color="#0f172a"
+                color={
+                  isDark
+                    ? "#ffffff"
+                    : "#0f172a"
+                }
               />
 
-              <Text className="mt-4 text-sm text-slate-400">
+              <Text className="mt-4 text-sm text-slate-400 dark:text-slate-500">
                 Loading payments...
               </Text>
 
             </View>
           ) : (
-            <View className="items-center rounded-3xl bg-white px-6 py-12">
+            <View className="items-center rounded-3xl bg-white px-6 py-12 dark:bg-slate-900">
 
-              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
 
                 <Ionicons
                   name="wallet-outline"
                   size={30}
-                  color="#64748b"
+                  color={secondaryIconColor}
                 />
 
               </View>
 
-              <Text className="mt-5 text-lg font-bold text-slate-900">
+              <Text className="mt-5 text-lg font-bold text-slate-900 dark:text-white">
                 No payments found
               </Text>
 
-              <Text className="mt-2 text-center text-sm leading-6 text-slate-400">
+              <Text className="mt-2 text-center text-sm leading-6 text-slate-400 dark:text-slate-500">
                 Payments recorded from sales will appear here.
               </Text>
 

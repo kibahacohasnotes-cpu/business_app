@@ -1,8 +1,3 @@
-import {
-  createCustomer,
-} from "@/lib/customers";
-import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -14,43 +9,42 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import NetInfo from "@react-native-community/netinfo";
+import { useLocalSearchParams, useRouter } from "expo-router";
+
 import AppAlert from "@/components/ui/AppAlert";
+import { useTheme } from "@/context/ThemeContext";
+import { createCustomer } from "@/lib/customers";
 
 export default function AddCustomerScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
 
-  const { from } =  useLocalSearchParams<{
+  const { from } = useLocalSearchParams<{
     from?: string;
   }>();
 
   const [saving, setSaving] = useState(false);
 
-  const [alertVisible, setAlertVisible] =
-    useState(false);
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState<
+    "success" | "error" | "warning"
+  >("success");
 
-  const [alertTitle, setAlertTitle] =
-    useState("");
-
-  const [alertMessage, setAlertMessage] =
-    useState("");
-
-  const [alertType, setAlertType] =
-    useState<
-      "success" | "error" | "warning"
-    >("success");
+  const iconColor = isDark ? "#ffffff" : "#0f172a";
 
   function showAlert(
     title: string,
     message: string,
-    type:
-      | "success"
-      | "error"
-      | "warning" = "success"
+    type: "success" | "error" | "warning" = "success"
   ) {
     setAlertTitle(title);
     setAlertMessage(message);
@@ -59,51 +53,50 @@ export default function AddCustomerScreen() {
   }
 
   /* =====================================================
-     SANITIZATION
+      SANITIZATION
   ===================================================== */
 
   function handleNameChange(value: string) {
     // Remove numbers and unusual symbols.
-    const sanitized = value.replace(
-      /[^a-zA-ZÀ-ÿ\s.'-]/g,
-      ""
-    );
-
+    const sanitized = value.replace(/[^a-zA-ZÀ-ÿ\s.'-]/g, "");
     setName(sanitized);
   }
 
   function handlePhoneChange(value: string) {
     // Phone numbers: digits only.
-    const sanitized = value.replace(
-      /[^0-9]/g,
-      ""
-    );
-
+    const sanitized = value.replace(/[^0-9]/g, "");
     setPhone(sanitized);
   }
 
   function handleEmailChange(value: string) {
     // Remove spaces.
-    const sanitized = value.replace(
-      /\s/g,
-      ""
-    );
-
+    const sanitized = value.replace(/\s/g, "");
     setEmail(sanitized.toLowerCase());
   }
 
   /* =====================================================
-     CREATE CUSTOMER
+      CREATE CUSTOMER
   ===================================================== */
 
   async function handleCreateCustomer() {
+    const network = await NetInfo.fetch();
+
+    if (!network.isConnected) {
+      showAlert(
+        "You're offline",
+        "You need an internet connection to save a customer.",
+        "warning"
+      );
+      return;
+    }
+
     const cleanName = name.trim();
     const cleanPhone = phone.trim();
     const cleanEmail = email.trim().toLowerCase();
     const cleanAddress = address.trim();
 
     /* ---------------------------------------------------
-       NAME
+        NAME
     --------------------------------------------------- */
 
     if (!cleanName) {
@@ -116,13 +109,10 @@ export default function AddCustomerScreen() {
     }
 
     /* ---------------------------------------------------
-       PHONE
+        PHONE
     --------------------------------------------------- */
 
-    if (
-      cleanPhone &&
-      !/^[0-9]+$/.test(cleanPhone)
-    ) {
+    if (cleanPhone && !/^[0-9]+$/.test(cleanPhone)) {
       showAlert(
         "Invalid phone",
         "Phone number can only contain numbers.",
@@ -132,14 +122,12 @@ export default function AddCustomerScreen() {
     }
 
     /* ---------------------------------------------------
-       EMAIL
+        EMAIL
     --------------------------------------------------- */
 
     if (
       cleanEmail &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        cleanEmail
-      )
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)
     ) {
       showAlert(
         "Invalid email",
@@ -165,10 +153,7 @@ export default function AddCustomerScreen() {
         "success"
       );
     } catch (error: any) {
-      console.error(
-        "CREATE CUSTOMER ERROR:",
-        error
-      );
+      console.error("CREATE CUSTOMER ERROR:", error);
 
       showAlert(
         "Unable to add customer",
@@ -181,63 +166,53 @@ export default function AddCustomerScreen() {
     }
   }
 
-function handleAlertClose() {
-  setAlertVisible(false);
+  function handleAlertClose() {
+    setAlertVisible(false);
 
-  if (
-    alertType === "success" &&
-    alertTitle === "Customer added"
-  ) {
-    if (from === "sale") {
-      router.replace("/add-sale");
-    } else {
-      router.back();
+    if (
+      alertType === "success" &&
+      alertTitle === "Customer added"
+    ) {
+      if (from === "sale") {
+        router.replace("/add-sale");
+      } else {
+        router.back();
+      }
     }
   }
-}
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-slate-50"
-      behavior={
-        Platform.OS === "ios"
-          ? "padding"
-          : undefined
-      }
+      className="flex-1 bg-slate-50 dark:bg-slate-950"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* =================================================
           STATIC HEADER
       ================================================= */}
 
-      <View className="bg-slate-50 px-5 pb-4 pt-14">
-
+      <View className="bg-slate-50 px-5 pb-4 pt-14 dark:bg-slate-950">
         <View className="flex-row items-center">
-
           <Pressable
             onPress={() => router.back()}
-            className="mr-4 h-11 w-11 items-center justify-center rounded-2xl bg-white active:opacity-70"
+            className="mr-4 h-11 w-11 items-center justify-center rounded-2xl bg-white active:opacity-70 dark:bg-slate-900"
           >
             <Ionicons
               name="arrow-back"
               size={22}
-              color="#0f172a"
+              color={iconColor}
             />
           </Pressable>
 
           <View className="flex-1">
-
-            <Text className="text-3xl font-bold text-slate-950">
+            <Text className="text-3xl font-bold text-slate-950 dark:text-white">
               Add Customer
             </Text>
 
-            <Text className="mt-1 text-sm text-slate-400">
+            <Text className="mt-1 text-sm text-slate-400 dark:text-slate-400">
               Add a new customer
             </Text>
-
           </View>
-
         </View>
-
       </View>
 
       {/* =================================================
@@ -252,18 +227,15 @@ function handleAlertClose() {
           paddingBottom: 100,
         }}
       >
-
-        <View className="mt-2 rounded-3xl bg-white p-5">
-
-          <Text className="mb-5 text-lg font-bold text-slate-900">
+        <View className="mt-2 rounded-3xl bg-white p-5 dark:bg-slate-900">
+          <Text className="mb-5 text-lg font-bold text-slate-900 dark:text-white">
             Customer information
           </Text>
 
           {/* NAME */}
 
           <View className="mb-5">
-
-            <Text className="mb-2 text-sm font-semibold text-slate-700">
+            <Text className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
               Customer name *
             </Text>
 
@@ -273,16 +245,14 @@ function handleAlertClose() {
               placeholder="e.g. John Mwangi"
               placeholderTextColor="#94a3b8"
               autoCapitalize="words"
-              className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900"
+              className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900 dark:bg-slate-800 dark:text-white"
             />
-
           </View>
 
           {/* PHONE */}
 
           <View className="mb-5">
-
-            <Text className="mb-2 text-sm font-semibold text-slate-700">
+            <Text className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
               Phone
             </Text>
 
@@ -293,16 +263,14 @@ function handleAlertClose() {
               placeholderTextColor="#94a3b8"
               keyboardType="phone-pad"
               maxLength={15}
-              className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900"
+              className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900 dark:bg-slate-800 dark:text-white"
             />
-
           </View>
 
           {/* EMAIL */}
 
           <View className="mb-5">
-
-            <Text className="mb-2 text-sm font-semibold text-slate-700">
+            <Text className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
               Email
             </Text>
 
@@ -314,16 +282,14 @@ function handleAlertClose() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900"
+              className="rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900 dark:bg-slate-800 dark:text-white"
             />
-
           </View>
 
           {/* ADDRESS */}
 
           <View className="mb-2">
-
-            <Text className="mb-2 text-sm font-semibold text-slate-700">
+            <Text className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
               Address
             </Text>
 
@@ -335,11 +301,9 @@ function handleAlertClose() {
               multiline
               numberOfLines={3}
               textAlignVertical="top"
-              className="min-h-[100px] rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900"
+              className="min-h-[100px] rounded-2xl bg-slate-50 px-4 py-4 text-base text-slate-900 dark:bg-slate-800 dark:text-white"
             />
-
           </View>
-
         </View>
 
         {/* =================================================
@@ -351,31 +315,26 @@ function handleAlertClose() {
           onPress={handleCreateCustomer}
           className={`mt-5 items-center rounded-2xl py-4 ${
             saving
-              ? "bg-slate-400"
-              : "bg-slate-950"
+              ? "bg-slate-400 dark:bg-slate-700"
+              : "bg-slate-950 dark:bg-white"
           }`}
         >
-
           {saving ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={isDark ? "#0f172a" : "#ffffff"} />
           ) : (
             <View className="flex-row items-center">
-
               <Ionicons
                 name="person-add-outline"
                 size={21}
-                color="white"
+                color={isDark ? "#0f172a" : "#ffffff"}
               />
 
-              <Text className="ml-2 text-base font-bold text-white">
+              <Text className="ml-2 text-base font-bold text-white dark:text-slate-950">
                 Add Customer
               </Text>
-
             </View>
           )}
-
         </Pressable>
-
       </ScrollView>
 
       {/* =================================================
@@ -390,7 +349,6 @@ function handleAlertClose() {
         buttonText="Done"
         onClose={handleAlertClose}
       />
-
     </KeyboardAvoidingView>
   );
 }

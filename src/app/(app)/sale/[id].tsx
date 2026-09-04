@@ -1,12 +1,3 @@
-import {
-  getSaleById,
-  getSaleItems,
-  getSaleReceiptUrl,
-  type Sale,
-  type SaleItem,
-} from "@/lib/sales";
-import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -16,10 +7,22 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+
 import AppAlert from "@/components/ui/AppAlert";
+import { useTheme } from "@/context/ThemeContext";
+import {
+  getSaleById,
+  getSaleItems,
+  getSaleReceiptUrl,
+  type Sale,
+  type SaleItem,
+} from "@/lib/sales";
 
 export default function SaleDetailScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
 
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -35,6 +38,8 @@ export default function SaleDetailScreen() {
   const [alertType, setAlertType] = useState<
     "success" | "error" | "warning"
   >("success");
+
+  const iconColor = isDark ? "#ffffff" : "#0f172a";
 
   /* =====================================================
      LOAD SALE
@@ -151,13 +156,13 @@ export default function SaleDetailScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50">
+      <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
         <ActivityIndicator
           size="large"
-          color="#0f172a"
+          color={iconColor}
         />
 
-        <Text className="mt-4 text-sm text-slate-400">
+        <Text className="mt-4 text-sm text-slate-400 dark:text-slate-400">
           Loading sale...
         </Text>
       </View>
@@ -170,8 +175,8 @@ export default function SaleDetailScreen() {
 
   if (!sale) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50 px-6">
-        <View className="h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+      <View className="flex-1 items-center justify-center bg-slate-50 px-6 dark:bg-slate-950">
+        <View className="h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-900">
           <Ionicons
             name="receipt-outline"
             size={30}
@@ -179,15 +184,15 @@ export default function SaleDetailScreen() {
           />
         </View>
 
-        <Text className="mt-5 text-xl font-bold text-slate-900">
+        <Text className="mt-5 text-xl font-bold text-slate-900 dark:text-white">
           Sale not found
         </Text>
 
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mt-6 rounded-2xl bg-slate-950 px-6 py-3"
+          className="mt-6 rounded-2xl bg-slate-950 px-6 py-3 dark:bg-white"
         >
-          <Text className="font-semibold text-white">
+          <Text className="font-semibold text-white dark:text-slate-950">
             Go back
           </Text>
         </TouchableOpacity>
@@ -200,33 +205,33 @@ export default function SaleDetailScreen() {
   ===================================================== */
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
 
       {/* =================================================
           STATIC HEADER
       ================================================= */}
 
-      <View className="bg-slate-50 px-5 pb-4 pt-14">
+      <View className="bg-slate-50 px-5 pb-4 pt-14 dark:bg-slate-950">
         <View className="flex-row items-center">
 
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.replace("../dashboard")}
             activeOpacity={0.7}
-            className="mr-4 h-11 w-11 items-center justify-center rounded-2xl bg-white"
+            className="mr-4 h-11 w-11 items-center justify-center rounded-2xl bg-white dark:bg-slate-900"
           >
             <Ionicons
               name="arrow-back"
               size={22}
-              color="#0f172a"
+              color={iconColor}
             />
           </TouchableOpacity>
 
           <View className="flex-1">
-            <Text className="text-2xl font-bold text-slate-950">
+            <Text className="text-2xl font-bold text-slate-950 dark:text-white">
               Sale Details
             </Text>
 
-            <Text className="mt-1 text-xs text-slate-400">
+            <Text className="mt-1 text-xs text-slate-400 dark:text-slate-400">
               Sale #{sale.id.slice(0, 8)}
             </Text>
           </View>
@@ -234,19 +239,19 @@ export default function SaleDetailScreen() {
           <View
             className={`rounded-full px-3 py-2 ${
               sale.status === "completed"
-                ? "bg-green-50"
+                ? "bg-green-50 dark:bg-green-950/40"
                 : sale.status === "cancelled"
-                ? "bg-red-50"
-                : "bg-orange-50"
+                ? "bg-red-50 dark:bg-red-950/40"
+                : "bg-orange-50 dark:bg-orange-950/40"
             }`}
           >
             <Text
               className={`text-xs font-bold ${
                 sale.status === "completed"
-                  ? "text-green-600"
+                  ? "text-green-600 dark:text-green-400"
                   : sale.status === "cancelled"
-                  ? "text-red-600"
-                  : "text-orange-600"
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-orange-600 dark:text-orange-400"
               }`}
             >
               {sale.status.toUpperCase()}
@@ -272,30 +277,30 @@ export default function SaleDetailScreen() {
             DATE + PAYMENT
         ================================================= */}
 
-        <View className="mt-3 rounded-3xl bg-white p-5">
+        <View className="mt-3 rounded-3xl bg-white p-5 dark:bg-slate-900">
 
           <View className="flex-row">
 
             <View className="flex-1">
-              <Text className="text-xs font-medium text-slate-400">
+              <Text className="text-xs font-medium text-slate-400 dark:text-slate-400">
                 SALE DATE
               </Text>
 
-              <Text className="mt-2 text-base font-bold text-slate-900">
+              <Text className="mt-2 text-base font-bold text-slate-900 dark:text-white">
                 {formatDate(sale.sale_date)}
               </Text>
 
-              <Text className="mt-1 text-xs text-slate-400">
+              <Text className="mt-1 text-xs text-slate-400 dark:text-slate-400">
                 {formatTime(sale.sale_date)}
               </Text>
             </View>
 
             <View className="flex-1 items-end">
-              <Text className="text-xs font-medium text-slate-400">
+              <Text className="text-xs font-medium text-slate-400 dark:text-slate-400">
                 PAYMENT
               </Text>
 
-              <Text className="mt-2 text-base font-bold text-slate-900">
+              <Text className="mt-2 text-base font-bold text-slate-900 dark:text-white">
                 {formatPaymentMethod(
                   sale.payment_method
                 )}
@@ -310,18 +315,18 @@ export default function SaleDetailScreen() {
             PRODUCTS
         ================================================= */}
 
-        <View className="mt-5 rounded-3xl bg-white p-5">
+        <View className="mt-5 rounded-3xl bg-white p-5 dark:bg-slate-900">
 
           <View className="mb-5 flex-row items-center">
-            <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+            <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
               <Ionicons
                 name="cart-outline"
                 size={21}
-                color="#0f172a"
+                color={iconColor}
               />
             </View>
 
-            <Text className="text-lg font-bold text-slate-900">
+            <Text className="text-lg font-bold text-slate-900 dark:text-white">
               Products
             </Text>
           </View>
@@ -331,41 +336,41 @@ export default function SaleDetailScreen() {
               key={item.id}
               className={`flex-row ${
                 index > 0
-                  ? "mt-4 border-t border-slate-100 pt-4"
+                  ? "mt-4 border-t border-slate-100 pt-4 dark:border-slate-800"
                   : ""
               }`}
             >
 
-              <View className="h-11 w-11 overflow-hidden rounded-xl bg-slate-100">
+              <View className="h-11 w-11 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
                 {item.product?.image_url ? (
-                    <Image
+                  <Image
                     source={{
-                        uri: item.product.image_url,
+                      uri: item.product.image_url,
                     }}
                     className="h-full w-full"
                     resizeMode="cover"
-                    />
+                  />
                 ) : (
-                    <View className="h-full w-full items-center justify-center">
+                  <View className="h-full w-full items-center justify-center">
                     <Ionicons
-                        name="cube-outline"
-                        size={20}
-                        color="#64748b"
+                      name="cube-outline"
+                      size={20}
+                      color="#64748b"
                     />
-                    </View>
+                  </View>
                 )}
-                </View>
+              </View>
 
               <View className="ml-3 flex-1">
 
                 <Text
-                  className="text-sm font-bold text-slate-900"
+                  className="text-sm font-bold text-slate-900 dark:text-white"
                   numberOfLines={2}
                 >
                   {item.product_name}
                 </Text>
 
-                <Text className="mt-1 text-xs text-slate-400">
+                <Text className="mt-1 text-xs text-slate-400 dark:text-slate-400">
                   {item.qty} × TZS{" "}
                   {formatMoney(
                     Number(item.unit_price)
@@ -375,7 +380,7 @@ export default function SaleDetailScreen() {
               </View>
 
               <View className="items-end">
-                <Text className="text-sm font-bold text-slate-950">
+                <Text className="text-sm font-bold text-slate-950 dark:text-white">
                   TZS{" "}
                   {formatMoney(
                     Number(item.subtotal)
@@ -392,9 +397,9 @@ export default function SaleDetailScreen() {
             PAYMENT SUMMARY
         ================================================= */}
 
-        <View className="mt-5 rounded-3xl bg-white p-5">
+        <View className="mt-5 rounded-3xl bg-white p-5 dark:bg-slate-900">
 
-          <Text className="mb-5 text-lg font-bold text-slate-900">
+          <Text className="mb-5 text-lg font-bold text-slate-900 dark:text-white">
             Payment Summary
           </Text>
 
@@ -414,15 +419,15 @@ export default function SaleDetailScreen() {
             negative
           />
 
-          <View className="my-4 h-px bg-slate-100" />
+          <View className="my-4 h-px bg-slate-100 dark:bg-slate-800" />
 
           <View className="flex-row items-center justify-between">
 
-            <Text className="text-base font-bold text-slate-900">
+            <Text className="text-base font-bold text-slate-900 dark:text-white">
               Total
             </Text>
 
-            <Text className="text-xl font-bold text-slate-950">
+            <Text className="text-xl font-bold text-slate-950 dark:text-white">
               TZS{" "}
               {formatMoney(
                 Number(sale.total)
@@ -438,18 +443,18 @@ export default function SaleDetailScreen() {
         ================================================= */}
 
         {receiptUrl && (
-          <View className="mt-5 rounded-3xl bg-white p-5">
+          <View className="mt-5 rounded-3xl bg-white p-5 dark:bg-slate-900">
 
             <View className="mb-5 flex-row items-center">
-              <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+              <View className="mr-3 h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
                 <Ionicons
                   name="image-outline"
                   size={21}
-                  color="#0f172a"
+                  color={iconColor}
                 />
               </View>
 
-              <Text className="text-lg font-bold text-slate-900">
+              <Text className="text-lg font-bold text-slate-900 dark:text-white">
                 Receipt
               </Text>
             </View>
@@ -471,13 +476,13 @@ export default function SaleDetailScreen() {
         ================================================= */}
 
         {sale.notes && (
-          <View className="mt-5 rounded-3xl bg-white p-5">
+          <View className="mt-5 rounded-3xl bg-white p-5 dark:bg-slate-900">
 
-            <Text className="mb-3 text-lg font-bold text-slate-900">
+            <Text className="mb-3 text-lg font-bold text-slate-900 dark:text-white">
               Notes
             </Text>
 
-            <Text className="text-sm leading-6 text-slate-500">
+            <Text className="text-sm leading-6 text-slate-500 dark:text-slate-400">
               {sale.notes}
             </Text>
 
@@ -522,15 +527,15 @@ function SummaryRow({
   return (
     <View className="mb-3 flex-row items-center justify-between">
 
-      <Text className="text-sm text-slate-500">
+      <Text className="text-sm text-slate-500 dark:text-slate-400">
         {label}
       </Text>
 
       <Text
         className={`text-sm font-semibold ${
           negative
-            ? "text-orange-500"
-            : "text-slate-900"
+            ? "text-orange-500 dark:text-orange-400"
+            : "text-slate-900 dark:text-white"
         }`}
       >
         {negative && value > 0

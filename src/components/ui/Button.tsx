@@ -5,7 +5,7 @@ import {
   View,
 } from "react-native";
 import { LucideIcon } from "lucide-react-native";
-
+import React from "react";
 type ButtonProps = {
   title: string;
   onPress: () => void;

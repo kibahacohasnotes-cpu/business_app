@@ -6,9 +6,14 @@ module.exports = {
     "./src/context/**/*.{js,jsx,ts,tsx}",
     "./src/lib/**/*.{js,jsx,ts,tsx}",
   ],
+
   presets: [require("nativewind/preset")],
+
+  darkMode: "class",
+
   theme: {
     extend: {},
   },
+
   plugins: [],
 };

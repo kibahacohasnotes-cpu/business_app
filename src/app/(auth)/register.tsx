@@ -1,10 +1,11 @@
+import { useTheme } from "@/context/ThemeContext";
+import AppAlert from "@/components/ui/AppAlert";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 import { signUp } from "@/lib/auth";
 import { useRouter } from "expo-router";
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Text,
   TextInput,
   TouchableOpacity,
@@ -13,6 +14,7 @@ import {
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -21,19 +23,39 @@ export default function RegisterScreen() {
 
   const [loading, setLoading] = useState(false);
 
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState<
+    "success" | "error" | "warning"
+  >("error");
+
+  function showAlert(
+    title: string,
+    message: string,
+    type: "success" | "error" | "warning" = "error"
+  ) {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertType(type);
+    setAlertVisible(true);
+  }
+
   async function handleRegister() {
     if (!fullName.trim() || !email.trim() || !password) {
-      Alert.alert(
+      showAlert(
         "Missing information",
-        "Name, email and password are required."
+        "Name, email and password are required.",
+        "warning"
       );
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert(
+      showAlert(
         "Password too short",
-        "Password must contain at least 6 characters."
+        "Password must contain at least 6 characters.",
+        "warning"
       );
       return;
     }
@@ -49,23 +71,36 @@ export default function RegisterScreen() {
       );
 
       if (!data.session) {
-        Alert.alert(
+        showAlert(
           "Check your email",
-          "Your account was created. Check your email to verify your account, then sign in."
+          "Your account was created. Check your email to verify your account, then sign in.",
+          "success"
         );
 
-        router.replace("/login");
         return;
       }
 
       router.replace("/business");
     } catch (error: any) {
-      Alert.alert(
+      showAlert(
         "Registration failed",
-        error?.message ?? "Unable to create your account."
+        error?.message ??
+          "Unable to create your account.",
+        "error"
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  function handleAlertClose() {
+    const shouldGoToLogin =
+      alertTitle === "Check your email";
+
+    setAlertVisible(false);
+
+    if (shouldGoToLogin) {
+      router.replace("/login");
     }
   }
 
@@ -75,6 +110,7 @@ export default function RegisterScreen() {
         flex: 1,
         padding: 24,
         justifyContent: "center",
+        backgroundColor: isDark ? "#020617" : "#ffffff",
       }}
     >
       <Text
@@ -82,6 +118,7 @@ export default function RegisterScreen() {
           fontSize: 32,
           fontWeight: "700",
           marginBottom: 8,
+          color: isDark ? "#ffffff" : "#111111",
         }}
       >
         Create account
@@ -89,54 +126,104 @@ export default function RegisterScreen() {
 
       <Text
         style={{
-          color: "#666",
+          color: isDark ? "#94a3b8" : "#666666",
           marginBottom: 28,
         }}
       >
         Create your account to get started.
       </Text>
 
-      <TextInput
-      placeholderTextColor="#888"
-        placeholder="Full name"
-        value={fullName}
-        onChangeText={setFullName}
-        style={inputStyle}
-      />
+      <OfflineBanner />
+
+      {/* Full name */}
 
       <TextInput
-      placeholderTextColor="#888"
+        placeholder="Full name"
+        placeholderTextColor={
+          isDark ? "#64748b" : "#888888"
+        }
+        value={fullName}
+        onChangeText={setFullName}
+        style={{
+          ...inputStyle,
+          borderColor: isDark ? "#334155" : "#dddddd",
+          color: isDark ? "#ffffff" : "#111111",
+          backgroundColor: isDark
+            ? "#0f172a"
+            : "#ffffff",
+        }}
+      />
+
+      {/* Phone */}
+
+      <TextInput
         placeholder="Phone number"
+        placeholderTextColor={
+          isDark ? "#64748b" : "#888888"
+        }
         keyboardType="phone-pad"
         value={phone}
         onChangeText={setPhone}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: isDark ? "#334155" : "#dddddd",
+          color: isDark ? "#ffffff" : "#111111",
+          backgroundColor: isDark
+            ? "#0f172a"
+            : "#ffffff",
+        }}
       />
 
+      {/* Email */}
+
       <TextInput
-      placeholderTextColor="#888"
         placeholder="Email"
+        placeholderTextColor={
+          isDark ? "#64748b" : "#888888"
+        }
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: isDark ? "#334155" : "#dddddd",
+          color: isDark ? "#ffffff" : "#111111",
+          backgroundColor: isDark
+            ? "#0f172a"
+            : "#ffffff",
+        }}
       />
 
+      {/* Password */}
+
       <TextInput
-      placeholderTextColor="#888"
         placeholder="Password"
+        placeholderTextColor={
+          isDark ? "#64748b" : "#888888"
+        }
         secureTextEntry
         value={password}
         onChangeText={setPassword}
-        style={inputStyle}
+        style={{
+          ...inputStyle,
+          borderColor: isDark ? "#334155" : "#dddddd",
+          color: isDark ? "#ffffff" : "#111111",
+          backgroundColor: isDark
+            ? "#0f172a"
+            : "#ffffff",
+        }}
       />
+
+      {/* Create account button */}
 
       <TouchableOpacity
         onPress={handleRegister}
         disabled={loading}
         style={{
-          backgroundColor: "#111",
+          backgroundColor: isDark
+            ? "#ffffff"
+            : "#111111",
           padding: 16,
           borderRadius: 12,
           alignItems: "center",
@@ -144,11 +231,13 @@ export default function RegisterScreen() {
         }}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator
+            color={isDark ? "#111111" : "#ffffff"}
+          />
         ) : (
           <Text
             style={{
-              color: "#fff",
+              color: isDark ? "#111111" : "#ffffff",
               fontSize: 16,
               fontWeight: "600",
             }}
@@ -158,6 +247,8 @@ export default function RegisterScreen() {
         )}
       </TouchableOpacity>
 
+      {/* Login */}
+
       <TouchableOpacity
         onPress={() => router.replace("/login")}
         style={{
@@ -165,23 +256,40 @@ export default function RegisterScreen() {
           alignItems: "center",
         }}
       >
-        <Text>
+        <Text
+          style={{
+            color: isDark ? "#94a3b8" : "#555555",
+          }}
+        >
           Already have an account?{" "}
-          <Text style={{ fontWeight: "700" }}>
+          <Text
+            style={{
+              fontWeight: "700",
+              color: isDark ? "#ffffff" : "#111111",
+            }}
+          >
             Sign in
           </Text>
         </Text>
       </TouchableOpacity>
+
+      {/* Custom alert */}
+
+      <AppAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+        buttonText="Okay"
+        onClose={handleAlertClose}
+      />
     </View>
   );
 }
 
 const inputStyle = {
   borderWidth: 1,
-  borderColor: "#ddd",
   borderRadius: 12,
   padding: 16,
   marginBottom: 14,
-  color: "#111",
-  backgroundColor: "#fff",
 };

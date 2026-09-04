@@ -1,6 +1,6 @@
 import { LucideIcon } from "lucide-react-native";
 import { Text, View } from "react-native";
-
+import React from "react";
 type StatCardProps = {
   title: string;
   value: string;

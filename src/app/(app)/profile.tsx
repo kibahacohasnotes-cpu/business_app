@@ -1,4 +1,5 @@
 import AppAlert from "@/components/ui/AppAlert";
+import { useTheme } from "@/context/ThemeContext";
 import { getMyBusiness } from "@/lib/business";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -47,6 +48,7 @@ import { getBusinessImageUrl, uploadBusinessAvatar, uploadBusinessCover } from "
 export default function ProfileScreen() {
 
 const router = useRouter();
+const { isDark } = useTheme();
 const [avatarUrl, setAvatarUrl] =  useState<string | null>(null);
 const [coverUrl, setCoverUrl] =  useState<string | null>(null);
 const [uploadingImage, setUploadingImage] =  useState(false);
@@ -56,6 +58,9 @@ const [loggingOut, setLoggingOut] =  useState(false);
 const [loading, setLoading] =  useState(true);
 const [business, setBusiness] =  useState<Business | null>(null);
 const [imageError, setImageError] =  useState(false);
+
+// shared icon color, mirrors the dashboard's isDark ? white : slate-950 pattern
+const iconColor = isDark ? "#ffffff" : "#0f172a";
 
   /* =====================================================
      LOAD BUSINESS
@@ -261,13 +266,13 @@ async function handleLogout() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50">
+      <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
         <ActivityIndicator
           size="large"
-          color="#0f172a"
+          color={iconColor}
         />
 
-        <Text className="mt-4 text-sm text-slate-400">
+        <Text className="mt-4 text-sm text-slate-400 dark:text-slate-500">
           Loading profile...
         </Text>
       </View>
@@ -282,7 +287,7 @@ async function handleLogout() {
 
 
 return (
-<View className="flex-1 bg-slate-50">
+<View className="flex-1 bg-slate-50 dark:bg-slate-950">
 
   {/* STATIC COVER */}
   <View className="relative overflow-hidden rounded-b-[32px]">
@@ -305,7 +310,7 @@ return (
       disabled={uploadingImage}
       className="relative"
     >
-      <View className="h-[20rem] w-full bg-gray-200">
+      <View className="h-[20rem] w-full bg-gray-200 dark:bg-slate-800">
 
         {coverUrl ? (
           <Image
@@ -317,7 +322,7 @@ return (
             contentFit="cover"
           />
         ) : (
-          <View className="h-full w-full bg-gray-200" />
+          <View className="h-full w-full bg-gray-200 dark:bg-slate-800" />
         )}
 
       </View>
@@ -359,7 +364,7 @@ return (
 
       <Text
         numberOfLines={1}
-        className="text-2xl font-bold text-slate-950"
+        className="text-2xl font-bold text-slate-950 dark:text-white"
       >
         {business?.name || "My Business"}
       </Text>
@@ -369,7 +374,7 @@ return (
 
           <View className="h-2 w-2 rounded-full bg-emerald-500" />
 
-          <Text className="ml-2 text-sm font-medium text-slate-500">
+          <Text className="ml-2 text-sm font-medium text-slate-500 dark:text-slate-400">
             {business.business_type}
           </Text>
 
@@ -378,15 +383,15 @@ return (
 
       <Pressable
         onPress={() => router.push("/edit-profile")}
-        className="mt-5 flex-row items-center rounded-2xl bg-slate-950 px-6 py-3 active:opacity-80"
+        className="mt-5 flex-row items-center rounded-2xl bg-slate-950 px-6 py-3 active:opacity-80 dark:bg-white"
       >
         <Ionicons
           name="create-outline"
           size={18}
-          color="white"
+          color={isDark ? "#0f172a" : "white"}
         />
 
-        <Text className="ml-2 text-sm font-bold text-white">
+        <Text className="ml-2 text-sm font-bold text-white dark:text-slate-950">
           Edit Profile
         </Text>
       </Pressable>
@@ -403,32 +408,32 @@ return (
 
 <View className="px-5">
 
-  <Text className="mb-3 text-lg font-bold text-slate-950">
+  <Text className="mb-3 text-lg font-bold text-slate-950 dark:text-white">
     Business Information
   </Text>
 
-  <View className="overflow-hidden rounded-[28px] bg-white p-5">
+  <View className="overflow-hidden rounded-[28px] bg-white p-5 dark:bg-slate-900">
 
     {/* BUSINESS TYPE */}
 
     {business?.business_type && (
       <View className="flex-row items-center">
 
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
           <Ionicons
             name="briefcase-outline"
             size={21}
-            color="#0f172a"
+            color={iconColor}
           />
         </View>
 
         <View className="ml-4 flex-1">
 
-          <Text className="text-xs font-medium text-slate-400">
+          <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
             BUSINESS TYPE
           </Text>
 
-          <Text className="mt-1 text-base font-semibold text-slate-900">
+          <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
             {business.business_type}
           </Text>
 
@@ -445,21 +450,21 @@ return (
 
         <View className="flex-row items-start">
 
-          <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+          <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
             <Ionicons
               name="document-text-outline"
               size={21}
-              color="#0f172a"
+              color={iconColor}
             />
           </View>
 
           <View className="ml-4 flex-1">
 
-            <Text className="text-xs font-medium text-slate-400">
+            <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
               ABOUT THE BUSINESS
             </Text>
 
-            <Text className="mt-1 text-base leading-6 text-slate-700">
+            <Text className="mt-1 text-base leading-6 text-slate-700 dark:text-slate-300">
               {business.description}
             </Text>
 
@@ -477,7 +482,7 @@ return (
       business?.description) &&
       (business?.phone ||
         business?.email) && (
-        <View className="my-6 h-px bg-slate-100" />
+        <View className="my-6 h-px bg-slate-100 dark:bg-slate-800" />
       )}
 
 
@@ -486,21 +491,21 @@ return (
     {business?.phone && (
       <View className="flex-row items-center">
 
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
           <Ionicons
             name="call-outline"
             size={21}
-            color="#0f172a"
+            color={iconColor}
           />
         </View>
 
         <View className="ml-4 flex-1">
 
-          <Text className="text-xs font-medium text-slate-400">
+          <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
             PHONE
           </Text>
 
-          <Text className="mt-1 text-base font-semibold text-slate-900">
+          <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
             {business.phone}
           </Text>
 
@@ -515,23 +520,23 @@ return (
     {business?.email && (
       <View className="mt-5 flex-row items-center">
 
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
           <Ionicons
             name="mail-outline"
             size={21}
-            color="#0f172a"
+            color={iconColor}
           />
         </View>
 
         <View className="ml-4 flex-1">
 
-          <Text className="text-xs font-medium text-slate-400">
+          <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
             EMAIL
           </Text>
 
           <Text
             numberOfLines={1}
-            className="mt-1 text-base font-semibold text-slate-900"
+            className="mt-1 text-base font-semibold text-slate-900 dark:text-white"
           >
             {business.email}
           </Text>
@@ -549,7 +554,7 @@ return (
       (business?.address ||
         business?.city ||
         business?.country) && (
-        <View className="my-6 h-px bg-slate-100" />
+        <View className="my-6 h-px bg-slate-100 dark:bg-slate-800" />
       )}
 
 
@@ -558,21 +563,21 @@ return (
     {business?.address && (
       <View className="flex-row items-start">
 
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
           <Ionicons
             name="location-outline"
             size={21}
-            color="#0f172a"
+            color={iconColor}
           />
         </View>
 
         <View className="ml-4 flex-1">
 
-          <Text className="text-xs font-medium text-slate-400">
+          <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
             ADDRESS
           </Text>
 
-          <Text className="mt-1 text-base font-semibold text-slate-900">
+          <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
             {business.address}
           </Text>
 
@@ -587,21 +592,21 @@ return (
     {business?.city && (
       <View className="mt-5 flex-row items-center">
 
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
           <Ionicons
             name="navigate-outline"
             size={21}
-            color="#0f172a"
+            color={iconColor}
           />
         </View>
 
         <View className="ml-4 flex-1">
 
-          <Text className="text-xs font-medium text-slate-400">
+          <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
             CITY
           </Text>
 
-          <Text className="mt-1 text-base font-semibold text-slate-900">
+          <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
             {business.city}
           </Text>
 
@@ -616,21 +621,21 @@ return (
     {business?.country && (
       <View className="mt-5 flex-row items-center">
 
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
           <Ionicons
             name="globe-outline"
             size={21}
-            color="#0f172a"
+            color={iconColor}
           />
         </View>
 
         <View className="ml-4 flex-1">
 
-          <Text className="text-xs font-medium text-slate-400">
+          <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
             COUNTRY
           </Text>
 
-          <Text className="mt-1 text-base font-semibold text-slate-900">
+          <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
             {business.country}
           </Text>
 
@@ -649,31 +654,31 @@ return (
 
 <View className="px-5">
 
-  <Text className="mb-3 mt-7 text-lg font-bold text-slate-950">
+  <Text className="mb-3 mt-7 text-lg font-bold text-slate-950 dark:text-white">
     Business Details
   </Text>
 
-  <View className="overflow-hidden rounded-[28px] bg-white">
+  <View className="overflow-hidden rounded-[28px] bg-white dark:bg-slate-900">
 
     {/* CURRENCY */}
 
     <View className="flex-row items-center px-5 py-5">
 
-      <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+      <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
         <Ionicons
           name="cash-outline"
           size={21}
-          color="#0f172a"
+          color={iconColor}
         />
       </View>
 
       <View className="ml-4 flex-1">
 
-        <Text className="text-xs font-medium text-slate-400">
+        <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
           CURRENCY
         </Text>
 
-        <Text className="mt-1 text-base font-semibold text-slate-900">
+        <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
           {business?.currency || "TZS"}
         </Text>
 
@@ -686,7 +691,7 @@ return (
 
     {(business?.registration_number ||
       business?.website) && (
-      <View className="mx-5 h-px bg-slate-100" />
+      <View className="mx-5 h-px bg-slate-100 dark:bg-slate-800" />
     )}
 
 
@@ -695,21 +700,21 @@ return (
     {business?.registration_number && (
       <View className="flex-row items-center px-5 py-5">
 
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
           <Ionicons
             name="card-outline"
             size={21}
-            color="#0f172a"
+            color={iconColor}
           />
         </View>
 
         <View className="ml-4 flex-1">
 
-          <Text className="text-xs font-medium text-slate-400">
+          <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
             REGISTRATION NUMBER
           </Text>
 
-          <Text className="mt-1 text-base font-semibold text-slate-900">
+          <Text className="mt-1 text-base font-semibold text-slate-900 dark:text-white">
             {business.registration_number}
           </Text>
 
@@ -724,23 +729,23 @@ return (
     {business?.website && (
       <View className="flex-row items-center px-5 py-5">
 
-        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+        <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
           <Ionicons
             name="link-outline"
             size={21}
-            color="#0f172a"
+            color={iconColor}
           />
         </View>
 
         <View className="ml-4 flex-1">
 
-          <Text className="text-xs font-medium text-slate-400">
+          <Text className="text-xs font-medium text-slate-400 dark:text-slate-500">
             WEBSITE / SOCIAL LINK
           </Text>
 
           <Text
             numberOfLines={1}
-            className="mt-1 text-base font-semibold text-slate-900"
+            className="mt-1 text-base font-semibold text-slate-900 dark:text-white"
           >
             {business.website}
           </Text>
@@ -765,7 +770,7 @@ return (
           onPress={() =>
             setLogoutAlert(true)
           }
-          className="mt-7 flex-row items-center justify-center rounded-2xl bg-red-50 py-4 active:opacity-70"
+          className="mt-7 flex-row items-center justify-center rounded-2xl bg-red-50 py-4 active:opacity-70 dark:bg-red-950/40"
         >
 
           {loggingOut ? (
@@ -780,7 +785,7 @@ return (
                 color="#dc2626"
               />
 
-              <Text className="ml-2 text-base font-bold text-red-600">
+              <Text className="ml-2 text-base font-bold text-red-600 dark:text-red-400">
                 Logout
               </Text>
             </>

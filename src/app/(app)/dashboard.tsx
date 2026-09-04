@@ -1,38 +1,35 @@
-
-import React, { useCallback, useEffect, useState } from "react";
+import { getMyBusiness } from "@/lib/business";
+import { getDashboardStats } from "@/lib/dashboard";
+import { supabase } from "@/lib/supabase";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
-  ActivityIndicator,
+  Bell,
+  ChevronRight, Eye,
+  EyeOff, FileText, Moon, Package,
+  Plus, ShoppingCart, Sun, TrendingDown, UserCircle,
+  Users,
+  Wallet
+} from "lucide-react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { Image } from "expo-image";
+import {
   Pressable,
   RefreshControl,
   ScrollView,
   Text,
-  View,
+  View
 } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
 import Animated, {
   FadeInDown,
   FadeInRight,
 } from "react-native-reanimated";
+
+import { useTheme } from "@/context/ThemeContext";
 import {
-  Bell,
-  ChevronRight,
-  LogOut,
-  Package,
-  Plus,
-  ShoppingCart,
-  UserCircle,
-  Users,
-  Wallet,
-  Eye,
-  EyeOff,
-  TrendingDown,
-} from "lucide-react-native";
-import { getMyBusiness } from "@/lib/business";
-import { getDashboardStats } from "@/lib/dashboard";
-import { supabase } from "@/lib/supabase";
-import AppAlert from "@/components/ui/AppAlert";
-
-
+  getDashboardCache,
+  saveDashboardCache,
+} from "@/lib/dashboardCache";
+import NetInfo from "@react-native-community/netinfo";
 type DashboardData = {
   products: number;
   customers: number;
@@ -45,8 +42,10 @@ type DashboardData = {
     low_stock_threshold: number;
   }[];
 };
-
+import { getBusinessImageUrl } from "@/lib/business-images";
 export default function Dashboard() {
+
+  const { isDark, toggleTheme } = useTheme();
 
   const [logoutAlert, setLogoutAlert] =  useState(false);
   const [moneyVisible, setMoneyVisible] = useState(false);
@@ -55,6 +54,10 @@ export default function Dashboard() {
   const [logoutError, setTheLogoutError] =  useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [cacheTime, setCacheTime] = useState<string | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [profileImageLoading, setProfileImageLoading] = useState(true);
 
   async function handleLogout() {
     try {
@@ -79,7 +82,7 @@ export default function Dashboard() {
       setLoggingOut(false);
 
       // We'll use the same AppAlert for errors
-      setLogoutError(true);
+      setTheLogoutError(true);
     }
   }
 
@@ -95,30 +98,113 @@ export default function Dashboard() {
   });
 
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      setLoading(true);
+const loadDashboard = useCallback(async () => {
+  try {
+    setLoading(true);
 
-      const business = await getMyBusiness();
+    const network = await NetInfo.fetch();
+    const connected = network.isConnected ?? false;
 
-      if (!business) {
-        console.log("No business found for current user");
-        return;
+    setIsOffline(!connected);
+
+    // -----------------------------------------
+    // OFFLINE → LOAD CACHED DASHBOARD
+    // -----------------------------------------
+    if (!connected) {
+      const cached = await getDashboardCache();
+
+      if (cached) {
+        setBusinessName(cached.businessName);
+        setCurrency(cached.currency);
+        setStats(cached.stats);
+        setCacheTime(cached.cachedAt);
+
+        console.log("Dashboard loaded from cache");
+      } else {
+        console.log("No dashboard cache available");
       }
 
-      setBusinessName(business.name);
-      setCurrency(business.currency || "TZS");
-
-      const dashboardStats =
-        await getDashboardStats(business.id);
-
-      setStats(dashboardStats);
-    } catch (error) {
-      console.error("Dashboard error:", error);
-    } finally {
-      setLoading(false);
+      return;
     }
-  }, []);
+
+    // -----------------------------------------
+    // ONLINE → LOAD FROM SUPABASE
+    // ----------------------------------------
+  const business = await getMyBusiness();
+    if (!business) {
+      console.log("No business found for current user");
+      router.replace("/business");
+      return;
+    }
+
+    if (!business) {
+      console.log("No business found for current user");
+      router.replace("/business");
+      return;
+    }
+
+    const businessCurrency = business.currency || "TZS";
+
+    setBusinessName(business.name);
+    setCurrency(businessCurrency);
+
+    const dashboardStats = await getDashboardStats(business.id);
+
+    setStats(dashboardStats);
+
+    // -----------------------------------------
+    // SAVE LATEST DATA LOCALLY
+    // -----------------------------------------
+    await saveDashboardCache({
+      businessName: business.name,
+      currency: businessCurrency,
+      stats: dashboardStats,
+    });
+
+    setCacheTime(new Date().toISOString());
+
+    console.log("Dashboard cache updated");
+  } catch (error) {
+    console.error("Dashboard error:", error);
+
+    // -----------------------------------------
+    // FALLBACK → CACHE
+    // -----------------------------------------
+    const cached = await getDashboardCache();
+
+    if (cached) {
+      setBusinessName(cached.businessName);
+      setCurrency(cached.currency);
+      setStats(cached.stats);
+      setCacheTime(cached.cachedAt);
+      setIsOffline(true);
+
+      console.log("Dashboard fallback to cache");
+    }
+  } finally {
+    setLoading(false);
+  }
+}, [router]);
+
+  useEffect(() => {
+  let mounted = true;
+
+  NetInfo.fetch().then((state) => {
+    if (!mounted) return;
+    setIsOffline(!(state.isConnected ?? false));
+  });
+
+  const unsubscribe = NetInfo.addEventListener((state) => {
+    if (!mounted) return;
+
+    setIsOffline(!(state.isConnected ?? false));
+  });
+
+  return () => {
+    mounted = false;
+    unsubscribe();
+  };
+}, []);
 
   const refreshDashboard = useCallback(async () => {
     try {
@@ -140,12 +226,9 @@ export default function Dashboard() {
     return `${currency} ${value.toLocaleString()}`;
   }
 
-  function setLogoutError(arg0: boolean) {
-    throw new Error("Function not implemented.");
-  }
 
 return (
-  <View className="flex-1 bg-slate-50">
+  <View className="flex-1 bg-slate-50 dark:bg-slate-950">
 
     {/* =====================================================
         STATIC HEADER
@@ -154,7 +237,7 @@ return (
 
 <Animated.View
   entering={FadeInDown.duration(500)}
-  className="bg-slate-50 px-6 pb-5 pt-16">
+  className="bg-slate-50 px-6 pb-5 pt-16 dark:bg-slate-950">
   <View className="flex-row items-center">
 
     {/* =================================================        PROFILE
@@ -166,23 +249,32 @@ return (
       }
       className="flex-1 flex-row items-center active:opacity-70"
     >
-
-      <View className="h-12 w-12 items-center justify-center rounded-2xl bg-white">
-        <UserCircle
-          size={27}
-          color="#0f172a"
-        />
+      <View className="h-12 w-12 overflow-hidden items-center justify-center rounded-2xl bg-slate-200 dark:bg-slate-800">
+        {profileImageUrl ? (
+          <Image
+            source={{ uri: profileImageUrl }}
+            className="h-full w-full"
+            contentFit="cover"
+            transition={200}
+          />
+        ) : (
+          <View className="h-full w-full items-center justify-center bg-slate-200 dark:bg-slate-800">
+            <Text className="text-lg font-bold text-slate-500 dark:text-slate-400">
+              {businessName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View className="ml-3 flex-1">
 
-        <Text className="text-sm font-medium text-slate-500">
+        <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 ">
           Welcome back 👋
         </Text>
 
         <Text
           numberOfLines={1}
-          className="mt-1 text-2xl font-bold text-slate-950"
+          className="mt-1 text-2xl font-bold text-slate-950 dark:text-white"
         >
           {businessName}
         </Text>
@@ -194,18 +286,27 @@ return (
     {/* =================================================
         NOTIFICATION
     ================================================= */}
-
+    <Pressable
+      onPress={toggleTheme}
+      className="h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 active:opacity-70 dark:bg-white"
+    >
+      {isDark ? (
+        <Sun size={21} color="#0f172a" />
+      ) : (
+        <Moon size={21} color="#ffffff" />
+      )}
+    </Pressable>
     <Pressable
       onPress={() => {
         console.log(
           "Notifications pressed"
         );
       }}
-      className="ml-3 h-12 w-12 items-center justify-center rounded-2xl bg-white active:opacity-70"
+      className="ml-3 h-12 w-12 items-center justify-center rounded-2xl bg-white active:opacity-70 dark:bg-slate-900"
     >
       <Bell
         size={21}
-        color="#0f172a"
+        color={isDark ? "#ffffff" : "#0f172a"}
       />
     </Pressable>
 
@@ -217,61 +318,79 @@ return (
     {/* =====================================================
         SCROLLABLE CONTENT
     ===================================================== */}
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerClassName="pb-32"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={refreshDashboard}
-            tintColor="#0f172a"
-            colors={["#0f172a"]}
-          />
-        }
+<ScrollView
+  className="flex-1"
+  showsVerticalScrollIndicator={false}
+  contentContainerClassName="pb-32"
+  refreshControl={
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={refreshDashboard}
+      tintColor={isDark ? "#ffffff" : "#0f172a"}
+      colors={[isDark ? "#ffffff" : "#0f172a"]}
+    />
+  }
 >
 
-      {/* =================================================
-          REVENUE
-      ================================================= */}
+  {isOffline && (
+    <View  className="mx-6 mb-4 rounded-2xl bg-amber-50 px-4 py-3 dark:bg-amber-950/40">
+      <Text className="text-sm font-bold text-amber-700 dark:text-amber-300">
+        You're offline
+      </Text>
+
+      <Text className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+        Showing your last saved dashboard data.
+        {cacheTime
+          ? ` Last updated ${new Date(cacheTime).toLocaleString()}.`
+          : ""}
+      </Text>
+    </View>
+  )}
+
+  {/* REVENUE */}
       <Animated.View
         entering={FadeInDown.delay(100).duration(500)}
-        className="mx-6 rounded-[28px] bg-slate-950 p-6"
+        className="mx-6"
       >
-        <View className="flex-row items-center justify-between">
-          <Text className="text-sm font-medium text-slate-400">
-            Total Revenue
+        <Pressable
+          onPress={() => router.push("/business-progress")}
+          className="rounded-[28px] bg-slate-950 p-6 active:opacity-90"
+        >
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-medium text-slate-400">
+              Total Revenue
+            </Text>
+
+            <Pressable
+              onPress={() =>
+                setMoneyVisible((current) => !current)
+              }
+              className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-70"
+            >
+              {moneyVisible ? (
+                <Eye size={19} color="white" />
+              ) : (
+                <EyeOff size={19} color="white" />
+              )}
+            </Pressable>
+          </View>
+
+          <Text className="mt-2 text-4xl font-bold text-white">
+            {loading
+              ? "Loading..."
+              : moneyVisible
+                ? formatMoney(stats.revenue)
+                : "••••••••"}
           </Text>
 
-          <Pressable
-            onPress={() =>
-              setMoneyVisible((current) => !current)
-            }
-            className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-70"
-          >
-            {moneyVisible ? (
-              <Eye size={19} color="white" />
-            ) : (
-              <EyeOff size={19} color="white" />
-            )}
-          </Pressable>
-        </View>
-
-        <Text className="mt-2 text-4xl font-bold text-white">
-          {loading
-            ? "Loading..."
-            : moneyVisible
-              ? formatMoney(stats.revenue)
-              : "••••••••"}
-        </Text>
-
-        <View className="mt-5 flex-row items-center">
-          <View className="rounded-full bg-white/10 px-3 py-1.5">
-            <Text className="text-xs font-semibold text-white">
-              Completed sales
-            </Text>
+          <View className="mt-5 flex-row items-center">
+            <View className="rounded-full bg-white/10 px-3 py-1.5">
+              <Text className="text-xs font-semibold text-white">
+                Completed sales
+              </Text>
+            </View>
           </View>
-        </View>
+        </Pressable>
       </Animated.View>
 
       {/* =================================================
@@ -288,20 +407,20 @@ return (
         >
           <Pressable
               onPress={() => router.push("/sales")           }
-            className="rounded-3xl bg-white p-5 active:opacity-70"
+            className="rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
           >
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
               <ShoppingCart
                 size={20}
-                color="#0f172a"
+                color={isDark ? "#ffffff" : "#0f172a"}
               />
             </View>
 
-            <Text className="mt-5 text-sm text-slate-500">
+            <Text className="mt-5 text-sm text-slate-500 dark:text-slate-400">
               Sales
             </Text>
 
-            <Text className="mt-1 text-2xl font-bold text-slate-950">
+            <Text className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
               {loading ? "..." : stats.sales}
             </Text>
           </Pressable>
@@ -316,20 +435,20 @@ return (
         >
           <Pressable
             onPress={() => router.push("/products")}
-            className="rounded-3xl bg-white p-5 active:opacity-70"
+            className="rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
           >
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
               <Package
                 size={20}
-                color="#0f172a"
+                color={isDark ? "#ffffff" : "#0f172a"}
               />
             </View>
 
-            <Text className="mt-5 text-sm text-slate-500">
+            <Text className="mt-5 text-sm text-slate-500 dark:text-slate-400">
               Products
             </Text>
 
-            <Text className="mt-1 text-2xl font-bold text-slate-950">
+            <Text className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
               {loading ? "..." : stats.products}
             </Text>
           </Pressable>
@@ -351,24 +470,24 @@ return (
             console.log("Customers pressed");
             router.push("/customers");
           }}
-          className="rounded-3xl bg-white p-5 active:opacity-70"
+          className="rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
         >
           <View className="flex-row items-center">
 
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
               <Users
                 size={20}
-                color="#0f172a"
+                color={isDark ? "#ffffff" : "#0f172a"}
               />
             </View>
 
             <View className="ml-4 flex-1">
 
-              <Text className="text-sm text-slate-500">
+              <Text className="text-sm text-slate-500 dark:text-slate-200">
                 Customer
               </Text>
 
-              <Text className="mt-1 text-2xl font-bold text-slate-950">
+              <Text className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
                 {loading ? "..." : stats.customers}
               </Text>
 
@@ -393,24 +512,24 @@ return (
         >
           <Pressable
             onPress={() => router.push("/expenses")}
-            className="rounded-3xl bg-white p-5 active:opacity-70"
+            className="rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
           >
             <View className="flex-row items-center">
 
-              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                 <TrendingDown
                   size={20}
-                  color="#0f172a"
+                  color={isDark ? "#ffffff" : "#0f172a"}
                 />
               </View>
 
               <View className="ml-4 flex-1">
 
-                <Text className="text-sm text-slate-500">
+                <Text className="text-sm text-slate-500 dark:text-slate-200">
                   Expenses
                 </Text>
 
-                <Text className="mt-1 text-base font-bold text-slate-950">
+                <Text className="mt-1 text-base font-bold text-slate-950 dark:text-white">
                   Track business expenses
                 </Text>
 
@@ -434,24 +553,24 @@ return (
         >
           <Pressable
             onPress={() => router.push("/payments")}
-            className="rounded-3xl bg-white p-5 active:opacity-70"
+            className="rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
           >
             <View className="flex-row items-center">
 
-              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
                 <Wallet
                   size={20}
-                  color="#0f172a"
+                  color={isDark ? "#ffffff" : "#0f172a"}
                 />
               </View>
 
               <View className="ml-4 flex-1">
 
-                <Text className="text-sm text-slate-500">
+                <Text className="text-sm text-slate-500 dark:text-slate-400">
                   Payments
                 </Text>
 
-                <Text className="mt-1 text-base font-bold text-slate-950">
+                <Text className="mt-1 text-base font-bold text-slate-950 dark:text-white">
                   Payment history
                 </Text>
 
@@ -474,7 +593,7 @@ return (
         entering={FadeInDown.delay(400).duration(500)}
         className="mt-8 px-6"
       >
-        <Text className="mb-4 text-xl font-bold text-slate-950">
+        <Text className="mb-4 text-xl font-bold text-slate-950 dark:text-white">
           Quick Actions
         </Text>
 
@@ -484,7 +603,7 @@ return (
 
           <Pressable
             onPress={() => router.push("/add-sale")}
-            className="flex-1 rounded-3xl bg-slate-950 p-5 active:opacity-80"
+            className="flex-1 m-1 rounded-3xl bg-white p-5 active:opacity-80 dark:bg-slate-900"
           >
             <View className="h-11 w-11 items-center justify-center rounded-2xl bg-white/10">
               <Plus
@@ -507,28 +626,44 @@ return (
 
           <Pressable
             onPress={() => router.push("/add-product")}
-            className="flex-1 rounded-3xl bg-white p-5 active:opacity-80"
+            className="flex-1 m-1 rounded-3xl bg-white p-5 active:opacity-80 dark:bg-slate-900"
           >
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100">
+            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
               <Package
                 size={21}
-                color="#0f172a"
+                color={isDark ? "#ffffff" : "#0f172a"}
               />
             </View>
 
-            <Text className="mt-4 font-semibold text-slate-950">
+            <Text className="mt-4 font-semibold text-slate-950 dark:text-white">
               Add Product
             </Text>
 
-            <Text className="mt-1 text-xs text-slate-400">
+            <Text className="mt-1 text-xs text-slate-400 dark:text-slate-400">
               Add inventory
             </Text>
           </Pressable>
 
         </View>
       </Animated.View>
+<View className="mt-1 px-1">
+      <Pressable
+        onPress={() => router.push("/reports")}
+        className="rounded-2xl bg-white p-4 shadow-sm dark:bg-slate-900"
+      >
+        <View className="mb-3 h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+          <FileText size={22} color="#208AEF" />
+        </View>
 
+        <Text className="text-base font-bold text-slate-900 dark:text-white">
+          Reports
+        </Text>
 
+        <Text className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Generate business reports
+        </Text>
+      </Pressable>
+</View>
       {/* =================================================
           LOW STOCK
       ================================================= */}
@@ -539,7 +674,7 @@ return (
       >
         <View className="mb-4 flex-row items-center justify-between">
 
-          <Text className="text-xl font-bold text-slate-950">
+          <Text className="text-xl font-bold text-slate-950 dark:text-white">
             Low Stock
           </Text>
 
@@ -551,8 +686,8 @@ return (
 
         {stats.lowStock.length === 0 ? (
 
-          <View className="rounded-3xl bg-white p-5">
-            <Text className="text-center text-sm text-slate-400">
+          <View className="rounded-3xl bg-white p-5 dark:bg-slate-900">
+            <Text className="text-center text-sm text-slate-400 dark:text-slate-400">
               No low-stock products 🎉
             </Text>
           </View>
@@ -571,7 +706,7 @@ return (
                   },
                 })
               }
-              className="mb-3 rounded-3xl bg-white p-5 active:opacity-70"
+              className="mb-3 rounded-3xl bg-white p-5 active:opacity-70 dark:bg-slate-900"
             >
 
               <View className="flex-row items-center">
@@ -585,11 +720,11 @@ return (
 
                 <View className="ml-4 flex-1">
 
-                  <Text className="font-semibold text-slate-900">
+                  <Text className="font-semibold text-slate-900 dark:text-white">
                     {product.name}
                   </Text>
 
-                  <Text className="mt-1 text-xs text-slate-400">
+                  <Text className="mt-1 text-xs text-slate-400 dark:text-slate-400">
                     Stock: {product.stock_qty}
                   </Text>
 
