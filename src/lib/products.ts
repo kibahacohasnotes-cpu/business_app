@@ -193,22 +193,26 @@ export async function saveProductImage({
       .eq("product_id", productId);
   }
 
-  const { data, error } = await supabase
-    .from("product_images")
-    .insert({
-      product_id: productId,
-      image_url: imageUrl,
-      sort_order: sortOrder,
-      is_primary: isPrimary,
-    })
-    .select()
-    .single();
+const { data, error } = await supabase
+  .from("product_images")
+  .select(`
+    id,
+    product_id,
+    image_url,
+    sort_order,
+    is_primary,
+    created_at
+  `)
+  .eq("product_id", productId)
+  .order("sort_order", {
+    ascending: true,
+  });
 
-  if (error) {
-    throw error;
-  }
+if (error) {
+  throw error;
+}
 
-  return data as ProductImage;
+return data[0] as ProductImage;
 }
 
 /* =========================================================
