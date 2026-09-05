@@ -3,7 +3,20 @@ import { getProducts, type Product } from "@/lib/products";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Package } from "lucide-react-native";
-import React, { useCallback, useMemo, useState } from "react";
+import { getCachedBusiness, saveBusinessCache } from "@/lib/businessCache";
+import { supabase } from "@/lib/supabase";
+
+import NetInfo from "@react-native-community/netinfo";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  getCachedProducts,
+  saveProductsCache,
+} from "@/lib/productsCache";
 import {
   ActivityIndicator,
   FlatList,
@@ -20,6 +33,7 @@ export default function ProductsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const [isOffline, setIsOffline] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
@@ -29,25 +43,105 @@ export default function ProductsScreen() {
   /* =====================================================
      LOAD PRODUCTS
   ===================================================== */
+  useEffect(() => {
+  const unsubscribe = NetInfo.addEventListener((state) => {
+    setIsOffline(!state.isConnected);
+  });
 
-  const loadProducts = useCallback(async () => {
-    try {
-      const business = await getMyBusiness();
+  return unsubscribe;
+}, []);
 
-      if (!business) {
-        setProducts([]);
-        return;
-      }
+const loadProducts = useCallback(async (forceRefresh = false) => {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const data = await getProducts(business.id);
-      setProducts(data ?? []);
-    } catch (error) {
-      console.error("PRODUCTS ERROR:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      setProducts([]);
+      return;
     }
-  }, []);
+
+    let business = null;
+
+    // -------------------------------------------------
+    // GET BUSINESS FROM CACHE FIRST
+    // -------------------------------------------------
+    if (!forceRefresh) {
+      business = await getCachedBusiness(userId);
+
+      if (business) {
+        console.log("PRODUCTS: Business loaded from cache");
+      }
+    }
+
+    // -------------------------------------------------
+    // FALLBACK → SUPABASE
+    // -------------------------------------------------
+    if (!business) {
+      business = await getMyBusiness();
+
+      if (business) {
+        await saveBusinessCache(userId, {
+          id: business.id,
+          name: business.name,
+          currency: business.currency,
+        });
+      }
+    }
+
+    if (!business) {
+      setProducts([]);
+      return;
+    }
+
+    let hasCachedProducts = false;
+
+    // -------------------------------------------------
+    // LOAD PRODUCTS FROM CACHE
+    // -------------------------------------------------
+    if (!forceRefresh) {
+      const cached = await getCachedProducts(business.id);
+
+      if (cached?.products) {
+        setProducts(cached.products);
+        hasCachedProducts = true;
+        setLoading(false);
+
+        console.log("PRODUCTS: Loaded from cache");
+      }
+    }
+
+    // -------------------------------------------------
+    // FETCH FRESH PRODUCTS
+    // -------------------------------------------------
+    try {
+      const data = await getProducts(business.id);
+      const freshProducts = data ?? [];
+
+      setProducts(freshProducts);
+
+      await saveProductsCache(business.id, freshProducts);
+
+      console.log("PRODUCTS: Cache updated");
+    } catch (refreshError) {
+      if (hasCachedProducts) {
+        console.log(
+          "PRODUCTS REFRESH SKIPPED: Using cached products"
+        );
+      } else {
+        throw refreshError;
+      }
+    }
+  } catch (error) {
+    console.error("PRODUCTS ERROR:", error);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -195,6 +289,21 @@ export default function ProductsScreen() {
 
   return (
     <View className="flex-1 bg-slate-50 pt-8 dark:bg-slate-950">
+      {isOffline && (
+      <View className="mx-5 mt-2 rounded-2xl bg-red-50 px-4 py-3 dark:bg-red-950/40">
+        <View className="flex-row items-center">
+          <Ionicons
+            name="cloud-offline-outline"
+            size={18}
+            color={isDark ? "#f87171" : "#dc2626"}
+          />
+
+          <Text className="ml-2 flex-1 text-xs font-semibold text-red-600 dark:text-red-400">
+            Offline · Showing saved products
+          </Text>
+        </View>
+      </View>
+    )}
       {/* HEADER SECTION */}
       <View className="px-5 pb-4 pt-6">
         <View className="flex-row items-center justify-between">
@@ -311,9 +420,9 @@ export default function ProductsScreen() {
               refreshing={refreshing}
               tintColor={isDark ? "#ffffff" : "#000000"}
               onRefresh={() => {
-                setRefreshing(true);
-                loadProducts();
-              }}
+              setRefreshing(true);
+              loadProducts(true);
+            }}
             />
           }
           ListHeaderComponent={
