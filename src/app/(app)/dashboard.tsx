@@ -269,7 +269,7 @@ return (
       <View className="ml-3 flex-1">
 
         <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 ">
-          Welcome back 👋
+          Welcome back
         </Text>
 
         <Text

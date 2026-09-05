@@ -28,7 +28,25 @@ export async function getExpenses(
 ): Promise<Expense[]> {
   const { data, error } = await supabase
     .from("expenses")
-    .select("*")
+    .select(`
+      id,
+      business_id,
+      title,
+      category,
+      amount,
+      expense_date,
+      description,
+      payment_method,
+      reference,
+      vendor,
+      receipt_url,
+      is_recurring,
+      recurrence_period,
+      status,
+      created_by,
+      created_at,
+      updated_at
+    `)
     .eq("business_id", businessId)
     .order("expense_date", { ascending: false })
     .order("created_at", { ascending: false });

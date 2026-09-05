@@ -68,14 +68,15 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
-  const [alertType, setAlertType] = useState<
-    "success" | "error" | "warning"
-  >("error");
+const [alertType, setAlertType] = useState<
+  "success" | "error" | "warning"
+>("error");
 
   function showAlert(
     title: string,
@@ -232,24 +233,44 @@ export default function LoginScreen() {
 
           {/* Password */}
 
-          <TextInput
-            placeholder="Password"
-            placeholderTextColor={
-              isDark ? "#64748b" : "#888888"
-            }
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            style={{
-              borderWidth: 1,
-              borderColor: isDark ? "#334155" : "#dddddd",
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 20,
-              color: isDark ? "#ffffff" : "#111111",
-              backgroundColor: isDark ? "#0f172a" : "#ffffff",
-            }}
-          />
+          <View style={{ position: "relative", marginBottom: 20 }}>
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor={
+                isDark ? "#64748b" : "#888888"
+              }
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              style={{
+                borderWidth: 1,
+                borderColor: isDark ? "#334155" : "#dddddd",
+                borderRadius: 12,
+                padding: 16,
+                paddingRight: 48,
+                color: isDark ? "#ffffff" : "#111111",
+                backgroundColor: isDark ? "#0f172a" : "#ffffff",
+              }}
+            />
+
+            <TouchableOpacity
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={{
+                position: "absolute",
+                right: 16,
+                top: 0,
+                bottom: 0,
+                justifyContent: "center",
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={isDark ? "#94a3b8" : "#666666"}
+              />
+            </TouchableOpacity>
+          </View>
 
           {/* Login button */}
 

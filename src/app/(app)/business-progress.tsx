@@ -5,7 +5,12 @@ import {
   TrendingDown,
   TrendingUp
 } from "lucide-react-native";
-import React, { useCallback, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -22,7 +27,13 @@ import Svg, {
   Rect,
   Text as SvgText,
 } from "react-native-svg";
-
+import OfflineBanner from "@/components/ui/OfflineBanner";
+import {
+  getCachedPerformance,
+  savePerformanceCache,
+  isPerformanceCacheFresh,
+} from "@/lib/performanceCache";
+import NetInfo from "@react-native-community/netinfo";
 import { useTheme } from "@/context/ThemeContext";
 import { getMyBusiness } from "@/lib/business";
 import {
@@ -31,7 +42,11 @@ import {
   type BusinessPerformancePoint,
   type BusinessPerformanceSummary,
 } from "@/lib/dashboard";
-
+import { supabase } from "@/lib/supabase";
+import {
+  getCachedBusiness,
+  saveBusinessCache,
+} from "@/lib/businessCache";
 type Period = "7D" | "30D" | "3M" | "6M" | "1Y";
 
 const PERIODS: Period[] = ["7D", "30D", "3M", "6M", "1Y"];
@@ -648,37 +663,159 @@ function calculateGrowth(current: number, previous: number) {
   return ((current - previous) / previous) * 100;
 }
 
+function formatCacheTime(cachedAt: string): string {
+  const timestamp = new Date(cachedAt).getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return "Unknown";
+  }
+
+  const seconds = Math.floor(
+    (Date.now() - timestamp) / 1000
+  );
+
+  if (seconds < 10) {
+    return "Just now";
+  }
+
+  if (seconds < 60) {
+    return `${seconds}s ago`;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+
+  return `${days}d ago`;
+}
+
+
+
 export default function BusinessProgress() {
   const router = useRouter();
   const { isDark } = useTheme();
 
+  const [cacheInfo, setCacheInfo] = useState<{
+    cachedAt: string;
+    isFresh: boolean;
+  } | null>(null);
+
   const [period, setPeriod] = useState<Period>("30D");
   const [currency, setCurrency] = useState("TZS");
   const [data, setData] = useState<BusinessPerformancePoint[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
   const [previousSummary, setPreviousSummary] =
     useState<BusinessPerformanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadPerformance = useCallback(async () => {
-    try {
-      setLoading(true);
+  useEffect(() => {
+  const unsubscribe = NetInfo.addEventListener((state) => {
+    setIsOffline(!(state.isConnected ?? false));
+  });
 
-      const business = await getMyBusiness();
+  return unsubscribe;
+}, []);
 
-      if (!business) {
-        router.replace("/business");
+const loadPerformance = useCallback(async () => {
+  try {
+    // Get the locally stored auth session.
+    // This does not require a network request.
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      router.replace("/login");
+      return;
+    }
+
+    // Try the locally cached business first.
+let business = await getCachedBusiness(userId);
+
+if (!business) {
+  const freshBusiness = await getMyBusiness();
+
+  if (!freshBusiness) {
+    router.replace("/business");
+    return;
+  }
+
+  await saveBusinessCache(userId, {
+    id: freshBusiness.id,
+    name: freshBusiness.name,
+    currency: freshBusiness.currency || "TZS",
+  });
+
+  business = {
+    id: freshBusiness.id,
+    name: freshBusiness.name,
+    currency: freshBusiness.currency || "TZS",
+    cachedAt: new Date().toISOString(),
+  };
+}
+
+setCurrency(business.currency || "TZS");
+
+    const startDate = getStartDate(period);
+    const endDate = getToday();
+    const previousPeriod = getPreviousPeriodDates(period);
+
+    // 1. Load cached data first
+    const cached = await getCachedPerformance(
+      business.id,
+      period
+    );
+
+    if (cached) {
+      const fresh = isPerformanceCacheFresh(
+        cached.cachedAt
+      );
+
+      setData(cached.performance);
+      setPreviousSummary(cached.previous);
+
+      setCacheInfo({
+        cachedAt: cached.cachedAt,
+        isFresh: fresh,
+      });
+
+      setLoading(false);
+
+      console.log(
+        `Performance cache loaded: ${period}`,
+        fresh ? "(fresh)" : "(stale)"
+      );
+
+      // Fresh cache is good enough.
+      // Do not hit Supabase again.
+      if (fresh) {
         return;
       }
+    } else {
+      setLoading(true);
+    }
 
-      setCurrency(business.currency || "TZS");
-
-      const startDate = getStartDate(period);
-      const endDate = getToday();
-      const previousPeriod = getPreviousPeriodDates(period);
+    // 2. Fetch fresh data from Supabase
+    try {
       const [performance, previous] = await Promise.all([
-        getBusinessPerformance(business.id, startDate, endDate),
-
+        getBusinessPerformance(
+          business.id,
+          startDate,
+          endDate
+        ),
         getBusinessPerformanceSummary(
           business.id,
           previousPeriod.startDate,
@@ -686,14 +823,45 @@ export default function BusinessProgress() {
         ),
       ]);
 
+      // 3. Update UI with fresh data
       setData(performance);
       setPreviousSummary(previous);
-    } catch (error) {
-      console.error("BUSINESS PERFORMANCE ERROR:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [period, router]);
+
+      setCacheInfo({
+        cachedAt: new Date().toISOString(),
+        isFresh: true,
+      });
+
+      // 4. Save fresh data to local cache
+      await savePerformanceCache(
+        business.id,
+        period,
+        performance,
+        previous
+      );
+      } catch (refreshError) {
+        console.log(
+          "PERFORMANCE REFRESH SKIPPED:",
+          cached
+            ? "Using cached data"
+            : "No cached data available"
+        );
+
+        // If cached data exists, keep showing it.
+        // This is expected when the device is offline.
+        if (!cached) {
+          throw refreshError;
+        }
+      }
+  } catch (error) {
+    console.error(
+      "BUSINESS PERFORMANCE ERROR:",
+      error
+    );
+  } finally {
+    setLoading(false);
+  }
+}, [period, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -701,14 +869,59 @@ export default function BusinessProgress() {
     }, [loadPerformance])
   );
 
-  const refresh = useCallback(async () => {
-    try {
-      setRefreshing(true);
-      await loadPerformance();
-    } finally {
-      setRefreshing(false);
+const refresh = useCallback(async () => {
+  try {
+    setRefreshing(true);
+
+    const business = await getMyBusiness();
+
+    if (!business) {
+      router.replace("/business");
+      return;
     }
-  }, [loadPerformance]);
+
+    const startDate = getStartDate(period);
+    const endDate = getToday();
+    const previousPeriod = getPreviousPeriodDates(period);
+
+    // Force fresh data from Supabase
+    const [performance, previous] = await Promise.all([
+      getBusinessPerformance(
+        business.id,
+        startDate,
+        endDate
+      ),
+      getBusinessPerformanceSummary(
+        business.id,
+        previousPeriod.startDate,
+        previousPeriod.endDate
+      ),
+    ]);
+
+    // Update UI
+    setData(performance);
+    setPreviousSummary(previous);
+
+    // Replace cache with fresh data
+    await savePerformanceCache(
+      business.id,
+      period,
+      performance,
+      previous
+    );
+
+    console.log(
+      `Performance manually refreshed: ${period}`
+    );
+  } catch (error) {
+    console.error(
+      "BUSINESS PERFORMANCE REFRESH ERROR:",
+      error
+    );
+  } finally {
+    setRefreshing(false);
+  }
+}, [period, router]);
 
   const summary = useMemo(() => {
     const revenue = data.reduce((total, point) => total + point.revenue, 0);
@@ -762,8 +975,9 @@ export default function BusinessProgress() {
             </Text>
           </View>
         </View>
+        
       </View>
-
+    <OfflineBanner />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerClassName="pb-12"
@@ -804,6 +1018,36 @@ export default function BusinessProgress() {
             );
           })}
         </View>
+
+        {cacheInfo && (
+          <View className="mb-3 flex-row items-center justify-end px-1">
+            <View
+              className={`mr-2 h-2 w-2 rounded-full ${
+                isOffline
+                  ? "bg-amber-500"
+                  : cacheInfo.isFresh
+                  ? "bg-emerald-500"
+                  : "bg-amber-500"
+              }`}
+            />
+
+            <Text
+              className={`text-xs ${
+                isDark
+                  ? "text-slate-400"
+                  : "text-slate-500"
+              }`}
+            >
+              {isOffline
+                ? `Offline · Showing saved data · ${formatCacheTime(
+                    cacheInfo.cachedAt
+                  )}`
+                : `Updated ${formatCacheTime(
+                    cacheInfo.cachedAt
+                  )}`}
+            </Text>
+          </View>
+        )}
 
         {loading ? (
           <View className="h-[500px] items-center justify-center">
@@ -1050,3 +1294,5 @@ export default function BusinessProgress() {
     </View>
   );
 }
+
+
