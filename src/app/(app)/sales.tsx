@@ -1,7 +1,13 @@
 import { getSales, type Sale } from "@/lib/sales";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import {
+  getCachedBusiness,
+  saveBusinessCache,
+} from "@/lib/businessCache";
+import { getCachedSales } from "@/lib/salesCache";
 import {
   ActivityIndicator,
   FlatList,
@@ -12,7 +18,8 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-
+import { getMyBusiness } from "@/lib/business";
+import NetInfo from "@react-native-community/netinfo";
 type Filter = "all" | "completed" | "cancelled" | "draft";
 type SortOption =
   | "date_desc"
@@ -31,6 +38,7 @@ export default function SalesScreen() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [isOffline, setIsOffline] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,17 +47,83 @@ export default function SalesScreen() {
      LOAD SALES
   ===================================================== */
 
-  const loadSales = useCallback(async () => {
-    try {
-      const data = await getSales();
-      setSales(data ?? []);
-    } catch (error) {
-      console.error("GET SALES ERROR:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+const loadSales = useCallback(async (forceRefresh = false) => {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      setSales([]);
+      return;
     }
-  }, []);
+
+    let business = await getCachedBusiness(userId);
+
+    if (!business) {
+      const freshBusiness = await getMyBusiness();
+
+      if (!freshBusiness) {
+        setSales([]);
+        return;
+      }
+
+      await saveBusinessCache(userId, {
+        id: freshBusiness.id,
+        name: freshBusiness.name,
+        currency: freshBusiness.currency || "TZS",
+      });
+
+      business = {
+        id: freshBusiness.id,
+        name: freshBusiness.name,
+        currency: freshBusiness.currency || "TZS",
+        cachedAt: new Date().toISOString(),
+      };
+    }
+
+    // 1. Show cached sales immediately
+// 1. Load cached sales first
+const cached = await getCachedSales(business.id);
+
+if (cached) {
+  setSales(cached.sales);
+  setLoading(false);
+
+  console.log(
+    `Sales cache loaded (${cached.sales.length} sales)`
+  );
+}
+
+// 2. Decide whether we need Supabase
+if (!cached || forceRefresh) {
+  try {
+    const freshSales = await getSales();
+
+    setSales(freshSales);
+
+    console.log(
+      `Sales refreshed (${freshSales.length} sales)`
+    );
+  } catch (refreshError) {
+    if (cached) {
+      console.log(
+        "SALES REFRESH SKIPPED: Using cached sales"
+      );
+    } else {
+      throw refreshError;
+    }
+  }
+}
+  } catch (error) {
+    console.error("GET SALES ERROR:", error);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,6 +131,13 @@ export default function SalesScreen() {
     }, [loadSales])
   );
 
+  useEffect(() => {
+  const unsubscribe = NetInfo.addEventListener((state) => {
+    setIsOffline(!(state.isConnected ?? false));
+  });
+
+  return unsubscribe;
+}, []);
   /* =====================================================
      FILTER & SORT SALES
   ===================================================== */
@@ -346,6 +427,20 @@ export default function SalesScreen() {
         </View>
       </View>
 
+      {isOffline && sales.length > 0 && (
+        <View className="mx-5 mb-2 flex-row items-center rounded-2xl bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
+          <Ionicons
+            name="cloud-offline-outline"
+            size={18}
+            color="#d97706"
+          />
+
+          <Text className="ml-2 flex-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+            Offline · Showing saved sales
+          </Text>
+        </View>
+      )}
+
       {/* SCROLLABLE LIST */}
       <FlatList
         data={filteredSales}
@@ -363,7 +458,7 @@ export default function SalesScreen() {
             tintColor={isDark ? "#ffffff" : "#000000"}
             onRefresh={() => {
               setRefreshing(true);
-              loadSales();
+              loadSales(true);
             }}
           />
         }

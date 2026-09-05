@@ -215,7 +215,7 @@ export default function SaleDetailScreen() {
         <View className="flex-row items-center">
 
           <TouchableOpacity
-            onPress={() => router.replace("../dashboard")}
+            onPress={() => router.replace("./../sales")}
             activeOpacity={0.7}
             className="mr-4 h-11 w-11 items-center justify-center rounded-2xl bg-white dark:bg-slate-900"
           >

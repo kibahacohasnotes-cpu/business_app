@@ -86,6 +86,8 @@ export async function deleteSaleReceipt(
 }
 
 import { getMyBusiness } from "./business";
+import { getCachedBusiness, saveBusinessCache } from "./businessCache";
+import { saveSalesCache } from "./salesCache";
 
 export type Sale = {
   id: string;
@@ -140,10 +142,37 @@ export type SaleItem = {
 ========================================================= */
 
 export async function getSales(): Promise<Sale[]> {
-  const business = await getMyBusiness();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return [];
+  }
+
+  let business = await getCachedBusiness(userId);
 
   if (!business) {
-    return [];
+    const freshBusiness = await getMyBusiness();
+
+    if (!freshBusiness) {
+      return [];
+    }
+
+    business = {
+      id: freshBusiness.id,
+      name: freshBusiness.name,
+      currency: freshBusiness.currency || "TZS",
+      cachedAt: new Date().toISOString(),
+    };
+
+    await saveBusinessCache(userId, {
+      id: freshBusiness.id,
+      name: freshBusiness.name,
+      currency: freshBusiness.currency || "TZS",
+    });
   }
 
   const { data, error } = await supabase
@@ -165,8 +194,8 @@ export async function getSales(): Promise<Sale[]> {
       created_at,
       updated_at,
       sale_items (
-      product_name,
-      qty
+        product_name,
+        qty
       )
     `)
     .eq("business_id", business.id)
@@ -178,9 +207,12 @@ export async function getSales(): Promise<Sale[]> {
     throw error;
   }
 
-  return (data ?? []) as Sale[];
-}
+  const sales = (data ?? []) as Sale[];
 
+  await saveSalesCache(business.id, sales);
+
+  return sales;
+}
 
 /* =========================================================
    GET SINGLE SALE
