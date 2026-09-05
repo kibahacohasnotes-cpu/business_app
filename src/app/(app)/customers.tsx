@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import NetInfo from "@react-native-community/netinfo";
 import {
   ActivityIndicator,
   FlatList,
@@ -13,6 +19,13 @@ import { useFocusEffect, useRouter } from "expo-router";
 
 import { useTheme } from "@/context/ThemeContext";
 import { getCustomers, type Customer } from "@/lib/customers";
+import { getCachedBusiness, saveBusinessCache } from "@/lib/businessCache";
+import {
+  getCachedCustomers,
+  saveCustomersCache,
+} from "@/lib/customersCache";
+import { supabase } from "@/lib/supabase";
+import { getMyBusiness } from "@/lib/business";
 
 export default function CustomersScreen() {
   const router = useRouter();
@@ -22,24 +35,111 @@ export default function CustomersScreen() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
 
   const iconColor = isDark ? "#ffffff" : "#0f172a";
+  useEffect(() => {
+  const unsubscribe = NetInfo.addEventListener((state) => {
+    setIsOffline(!state.isConnected);
+  });
+
+  return unsubscribe;
+}, []);
 
   /* =====================================================
       LOAD CUSTOMERS
   ===================================================== */
 
-  const loadCustomers = useCallback(async () => {
+const loadCustomers = useCallback(async (forceRefresh = false) => {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      setCustomers([]);
+      return;
+    }
+
+    let business = null;
+
+    // -------------------------------------------------
+    // GET BUSINESS FROM CACHE FIRST
+    // -------------------------------------------------
+    if (!forceRefresh) {
+      business = await getCachedBusiness(userId);
+
+      if (business) {
+        console.log("CUSTOMERS: Business loaded from cache");
+      }
+    }
+
+    // -------------------------------------------------
+    // FALLBACK → SUPABASE
+    // -------------------------------------------------
+    if (!business) {
+      business = await getMyBusiness();
+
+      if (business) {
+        await saveBusinessCache(userId, {
+          id: business.id,
+          name: business.name,
+          currency: business.currency,
+        });
+      }
+    }
+
+    if (!business) {
+      setCustomers([]);
+      return;
+    }
+
+    let hasCachedCustomers = false;
+
+    // -------------------------------------------------
+    // LOAD CUSTOMERS FROM CACHE
+    // -------------------------------------------------
+    if (!forceRefresh) {
+      const cached = await getCachedCustomers(business.id);
+
+      if (cached?.customers) {
+        setCustomers(cached.customers);
+        hasCachedCustomers = true;
+        setLoading(false);
+
+        console.log("CUSTOMERS: Loaded from cache");
+      }
+    }
+
+    // -------------------------------------------------
+    // FETCH FRESH CUSTOMERS
+    // -------------------------------------------------
     try {
       const data = await getCustomers();
+
       setCustomers(data);
-    } catch (error) {
-      console.error("GET CUSTOMERS ERROR:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+
+      await saveCustomersCache(business.id, data);
+
+      console.log("CUSTOMERS: Cache updated");
+    } catch (refreshError) {
+      if (hasCachedCustomers) {
+        console.log(
+          "CUSTOMERS REFRESH SKIPPED: Using cached customers"
+        );
+      } else {
+        throw refreshError;
+      }
     }
-  }, []);
+  } catch (error) {
+    console.error("GET CUSTOMERS ERROR:", error);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -144,6 +244,7 @@ export default function CustomersScreen() {
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+
       {/* =================================================
           STATIC HEADER
       ================================================= */}
@@ -189,6 +290,21 @@ export default function CustomersScreen() {
           </Pressable>
         </View>
 
+      {isOffline && (
+      <View className="mx-5 mt-2 rounded-2xl bg-red-50 px-4 py-3 dark:bg-red-950/40">
+        <View className="flex-row items-center">
+          <Ionicons
+            name="cloud-offline-outline"
+            size={18}
+            color={isDark ? "#f87171" : "#dc2626"}
+          />
+
+          <Text className="ml-2 flex-1 text-xs font-semibold text-red-600 dark:text-red-400">
+            Offline · Showing saved customers
+          </Text>
+        </View>
+      </View>
+    )}
         {/* SEARCH */}
 
         <View className="mt-5 flex-row items-center rounded-2xl bg-white px-4 py-3 dark:bg-slate-900">
@@ -239,7 +355,7 @@ export default function CustomersScreen() {
             tintColor={iconColor}
             onRefresh={() => {
               setRefreshing(true);
-              loadCustomers();
+              loadCustomers(true);
             }}
           />
         }
